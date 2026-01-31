@@ -9,9 +9,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-    
+
     List<Transaction> findByDateBetween(LocalDate startDate, LocalDate endDate);
-    
+
     @Query("SELECT t FROM Transaction t WHERE t.date >= :date AND t.isConfirmed = false")
     List<Transaction> findFuturePlannedTransactions(@Param("date") LocalDate date);
+
+    List<Transaction> findByCardIdAndDateBetween(Long cardId, LocalDate startDate, LocalDate endDate);
+
+    @Query("SELECT t FROM Transaction t WHERE t.card.id = :cardId")
+    List<Transaction> findByCardId(@Param("cardId") Long cardId);
 }

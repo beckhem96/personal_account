@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
+import {
     getBudgets, getCategories, getTransactions, createTransaction, updateTransaction, deleteTransaction, setBudget, createCategory,
-    getCards, getRecurringTransactions, createRecurringTransaction, deleteRecurringTransaction
+    getCards, getRecurringTransactions, createRecurringTransaction, deleteRecurringTransaction, getTransactionsByCard
 } from '../api/services';
 import type { 
     BudgetResponse, CategoryResponse, TransactionResponse, TransactionType, PaymentMethod,
@@ -22,6 +22,10 @@ const BudgetPage = () => {
     // UI State
     const [isTxFormOpen, setIsTxFormOpen] = useState(false);
     const [editingTx, setEditingTx] = useState<TransactionResponse | null>(null);
+    const [selectedCardFilter, setSelectedCardFilter] = useState<number | null>(null);
+    const [filterStartDate, setFilterStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [filterEndDate, setFilterEndDate] = useState<string>(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [useCustomDateRange, setUseCustomDateRange] = useState(false);
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
@@ -53,20 +57,32 @@ const BudgetPage = () => {
 
     useEffect(() => {
         fetchData();
-    }, [currentDate]);
+    }, [currentDate, selectedCardFilter, filterStartDate, filterEndDate, useCustomDateRange]);
+
+    // 월 변경 시 커스텀 날짜 범위 초기화
+    useEffect(() => {
+        if (!useCustomDateRange) {
+            setFilterStartDate(format(startOfMonth(currentDate), 'yyyy-MM-dd'));
+            setFilterEndDate(format(endOfMonth(currentDate), 'yyyy-MM-dd'));
+        }
+    }, [currentDate, useCustomDateRange]);
 
     const fetchData = async () => {
         try {
-            const start = format(startOfMonth(currentDate), 'yyyy-MM-dd');
-            const end = format(endOfMonth(currentDate), 'yyyy-MM-dd');
+            const start = useCustomDateRange ? filterStartDate : format(startOfMonth(currentDate), 'yyyy-MM-dd');
+            const end = useCustomDateRange ? filterEndDate : format(endOfMonth(currentDate), 'yyyy-MM-dd');
 
-            const [bData, cData, tData, cardData, rData] = await Promise.all([
+            const [bData, cData, cardData, rData] = await Promise.all([
                 getBudgets(year, month),
                 getCategories(),
-                getTransactions(start, end),
                 getCards(),
                 getRecurringTransactions()
             ]);
+
+            // 카드 필터가 선택된 경우 카드별 조회, 아니면 전체 조회
+            const tData = selectedCardFilter
+                ? await getTransactionsByCard(selectedCardFilter, start, end)
+                : await getTransactions(start, end);
 
             setBudgets(bData);
             setCategories(cData);
@@ -346,18 +362,97 @@ const BudgetPage = () => {
 
                 {/* 2. Transaction List (Right Column) */}
                 <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col min-h-[600px]">
-                    <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
-                        <h2 className="text-lg font-bold text-slate-800">Transactions</h2>
-                        <button 
-                            onClick={() => {
-                                setEditingTx(null);
-                                resetTxForm();
-                                setIsTxFormOpen(!isTxFormOpen);
-                            }}
-                            className="bg-slate-900 text-white px-5 py-2 rounded-xl flex items-center text-sm font-medium hover:bg-slate-800 transition shadow-lg shadow-slate-900/10"
-                        >
-                            <Plus size={16} className="mr-2"/> Add Transaction
-                        </button>
+                    <div className="p-6 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl space-y-4">
+                        <div className="flex justify-between items-center">
+                            <h2 className="text-lg font-bold text-slate-800">Transactions</h2>
+                            <button
+                                onClick={() => {
+                                    setEditingTx(null);
+                                    resetTxForm();
+                                    setIsTxFormOpen(!isTxFormOpen);
+                                }}
+                                className="bg-slate-900 text-white px-5 py-2 rounded-xl flex items-center text-sm font-medium hover:bg-slate-800 transition shadow-lg shadow-slate-900/10"
+                            >
+                                <Plus size={16} className="mr-2"/> Add Transaction
+                            </button>
+                        </div>
+
+                        {/* Filters Row */}
+                        <div className="flex flex-wrap items-center gap-4">
+                            {/* Card Filter */}
+                            <div className="flex items-center gap-2">
+                                <CreditCard size={16} className="text-slate-400" />
+                                <select
+                                    value={selectedCardFilter || ''}
+                                    onChange={(e) => setSelectedCardFilter(e.target.value ? Number(e.target.value) : null)}
+                                    className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                                >
+                                    <option value="">All Cards</option>
+                                    {cards.map(card => (
+                                        <option key={card.id} value={card.id}>{card.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="w-px h-6 bg-slate-200" />
+
+                            {/* Date Range Filter */}
+                            <div className="flex items-center gap-2">
+                                <Calendar size={16} className="text-slate-400" />
+                                <label className="flex items-center gap-2 text-sm text-slate-600">
+                                    <input
+                                        type="checkbox"
+                                        checked={useCustomDateRange}
+                                        onChange={(e) => setUseCustomDateRange(e.target.checked)}
+                                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    Custom Range
+                                </label>
+                            </div>
+
+                            {useCustomDateRange && (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="date"
+                                        value={filterStartDate}
+                                        onChange={(e) => setFilterStartDate(e.target.value)}
+                                        className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                                    />
+                                    <span className="text-slate-400">~</span>
+                                    <input
+                                        type="date"
+                                        value={filterEndDate}
+                                        onChange={(e) => setFilterEndDate(e.target.value)}
+                                        className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                                    />
+                                </div>
+                            )}
+
+                            {/* Clear Filters */}
+                            {(selectedCardFilter || useCustomDateRange) && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedCardFilter(null);
+                                        setUseCustomDateRange(false);
+                                    }}
+                                    className="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1"
+                                >
+                                    <X size={14} />
+                                    Clear Filters
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Active Filter Info */}
+                        {(selectedCardFilter || useCustomDateRange) && (
+                            <div className="text-xs text-slate-500 bg-blue-50 px-3 py-2 rounded-lg">
+                                Showing: {selectedCardFilter ? cards.find(c => c.id === selectedCardFilter)?.name : 'All Cards'}
+                                {' · '}
+                                {useCustomDateRange ? `${filterStartDate} ~ ${filterEndDate}` : format(currentDate, 'MMMM yyyy')}
+                                {' · '}
+                                {transactions.length} transactions
+                            </div>
+                        )}
                     </div>
 
                     {isTxFormOpen && (

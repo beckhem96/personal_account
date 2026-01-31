@@ -92,6 +92,14 @@ export const getPlannedTransactions = async () => {
     return response.data;
 };
 
+export const getTransactionsByCard = async (cardId: number, startDate?: string, endDate?: string) => {
+    const params: Record<string, string> = {};
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    const response = await api.get<TransactionResponse[]>(`/transactions/by-card/${cardId}`, { params });
+    return response.data;
+};
+
 // Assets
 export const getAssets = async () => {
     const response = await api.get<AssetResponse[]>('/assets');

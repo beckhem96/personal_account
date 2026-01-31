@@ -104,4 +104,16 @@ public class TransactionService {
                 .map(TransactionResponse::from)
                 .collect(Collectors.toList());
     }
+
+    public List<TransactionResponse> getTransactionsByCard(Long cardId, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.findByCardIdAndDateBetween(cardId, startDate, endDate).stream()
+                .map(TransactionResponse::from)
+                .collect(Collectors.toList());
+    }
+
+    public List<TransactionResponse> getTransactionsByCard(Long cardId) {
+        return transactionRepository.findByCardId(cardId).stream()
+                .map(TransactionResponse::from)
+                .collect(Collectors.toList());
+    }
 }

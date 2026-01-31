@@ -51,4 +51,16 @@ public class TransactionController {
     public ResponseEntity<List<TransactionResponse>> getPlannedTransactions() {
         return ResponseEntity.ok(transactionService.getFuturePlannedTransactions());
     }
+
+    @GetMapping("/by-card/{cardId}")
+    public ResponseEntity<List<TransactionResponse>> getTransactionsByCard(
+            @PathVariable Long cardId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        if (startDate != null && endDate != null) {
+            return ResponseEntity.ok(transactionService.getTransactionsByCard(cardId, startDate, endDate));
+        }
+        return ResponseEntity.ok(transactionService.getTransactionsByCard(cardId));
+    }
 }
