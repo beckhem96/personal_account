@@ -99,6 +99,12 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    public List<TransactionResponse> getTransactionsByPaymentMethod(PaymentMethod paymentMethod, LocalDate startDate, LocalDate endDate) {
+        return transactionRepository.findByPaymentMethodAndDateBetween(paymentMethod, startDate, endDate).stream()
+                .map(TransactionResponse::from)
+                .collect(Collectors.toList());
+    }
+
     public List<TransactionResponse> getFuturePlannedTransactions() {
         return transactionRepository.findFuturePlannedTransactions(LocalDate.now()).stream()
                 .map(TransactionResponse::from)

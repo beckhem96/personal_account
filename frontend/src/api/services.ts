@@ -7,7 +7,8 @@ import type {
     TaxStockRequest, TaxStockResponse,
     YearEndSettlementRequest, YearEndSettlementResponse,
     Card, CardRequest,
-    RecurringTransaction, RecurringTransactionRequest
+    RecurringTransaction, RecurringTransactionRequest,
+    PaymentMethod
 } from '../types';
 
 // Categories
@@ -63,8 +64,10 @@ export const setBudget = async (data: BudgetRequest) => {
 };
 
 // Transactions
-export const getTransactions = async (startDate: string, endDate: string) => {
-    const response = await api.get<TransactionResponse[]>('/transactions', { params: { startDate, endDate } });
+export const getTransactions = async (startDate: string, endDate: string, paymentMethod?: PaymentMethod) => {
+    const params: any = { startDate, endDate };
+    if (paymentMethod) params.paymentMethod = paymentMethod;
+    const response = await api.get<TransactionResponse[]>('/transactions', { params });
     return response.data;
 };
 

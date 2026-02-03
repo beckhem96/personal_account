@@ -42,8 +42,12 @@ public class TransactionController {
     @GetMapping
     public ResponseEntity<List<TransactionResponse>> getTransactions(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) org.example.account.domain.PaymentMethod paymentMethod
     ) {
+        if (paymentMethod != null) {
+            return ResponseEntity.ok(transactionService.getTransactionsByPaymentMethod(paymentMethod, startDate, endDate));
+        }
         return ResponseEntity.ok(transactionService.getTransactions(startDate, endDate));
     }
     

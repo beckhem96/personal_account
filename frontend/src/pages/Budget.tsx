@@ -9,7 +9,7 @@ import type {
 } from '../types';
 import { formatCurrency, cn } from '../utils';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Plus, Settings, Calendar, CreditCard, Banknote, Landmark, X, ChevronLeft, ChevronRight, Repeat, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Settings, Calendar, CreditCard, Banknote, Landmark, X, ChevronLeft, ChevronRight, Repeat, Trash2, Edit2, Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 const BudgetPage = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -22,7 +22,10 @@ const BudgetPage = () => {
     // UI State
     const [isTxFormOpen, setIsTxFormOpen] = useState(false);
     const [editingTx, setEditingTx] = useState<TransactionResponse | null>(null);
-    const [selectedCardFilter, setSelectedCardFilter] = useState<number | null>(null);
+    
+    // Filter State: 'ALL' | 'CASH' | 'BANK_TRANSFER' | 'card_{id}'
+    const [filterType, setFilterType] = useState<string>('ALL');
+    
     const [filterStartDate, setFilterStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
     const [filterEndDate, setFilterEndDate] = useState<string>(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
     const [useCustomDateRange, setUseCustomDateRange] = useState(false);
@@ -57,7 +60,7 @@ const BudgetPage = () => {
 
     useEffect(() => {
         fetchData();
-    }, [currentDate, selectedCardFilter, filterStartDate, filterEndDate, useCustomDateRange]);
+    }, [currentDate, filterType, filterStartDate, filterEndDate, useCustomDateRange]);
 
     // 월 변경 시 커스텀 날짜 범위 초기화
     useEffect(() => {
@@ -91,10 +94,18 @@ const BudgetPage = () => {
                 }, {} as Record<number, BudgetResponse>))
                 : rawBudgets;
 
-            // 카드 필터가 선택된 경우 카드별 조회, 아니면 전체 조회
-            const tData = selectedCardFilter
-                ? await getTransactionsByCard(selectedCardFilter, start, end)
-                : await getTransactions(start, end);
+            let tData: TransactionResponse[] = [];
+            
+            if (filterType === 'ALL') {
+                tData = await getTransactions(start, end);
+            } else if (filterType === 'CASH') {
+                tData = await getTransactions(start, end, 'CASH');
+            } else if (filterType === 'BANK_TRANSFER') {
+                tData = await getTransactions(start, end, 'BANK_TRANSFER');
+            } else if (filterType.startsWith('card_')) {
+                const cardId = Number(filterType.split('_')[1]);
+                tData = await getTransactionsByCard(cardId, start, end);
+            }
 
             setBudgets(bData);
             setCategories(cData);
@@ -221,19 +232,39 @@ const BudgetPage = () => {
 
     const getCategoryStats = (categoryName: string) => {
         const budget = budgets.find(b => b.categoryName === categoryName);
-        const spent = transactions
+        const actual = transactions
             .filter(t => t.categoryName === categoryName)
             .reduce((sum, t) => sum + Number(t.amount), 0);
         
         return {
             budgetAmount: budget?.amount || 0,
-            spentAmount: spent,
-            percent: budget && budget.amount > 0 ? (spent / budget.amount) * 100 : 0
+            actualAmount: actual,
+            percent: budget && budget.amount > 0 ? (actual / budget.amount) * 100 : 0
         };
     };
 
-    const totalBudget = budgets.reduce((sum, b) => sum + b.amount, 0);
-    const totalSpent = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+    // Calculate Totals based on Transaction Type
+    const totalIncome = transactions
+        .filter(t => {
+            const cat = categories.find(c => c.name === t.categoryName);
+            return cat?.type === 'INCOME';
+        })
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const totalExpense = transactions
+        .filter(t => {
+            const cat = categories.find(c => c.name === t.categoryName);
+            return cat?.type === 'EXPENSE';
+        })
+        .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    // Filtered Budget Total (Only Expenses)
+    const totalExpenseBudget = budgets
+        .filter(b => {
+             const cat = categories.find(c => c.name === b.categoryName);
+             return cat?.type === 'EXPENSE';
+        })
+        .reduce((sum, b) => sum + b.amount, 0);
 
     return (
         <div className="space-y-8">
@@ -241,7 +272,7 @@ const BudgetPage = () => {
             <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Budget & Ledger</h1>
-                    <p className="text-slate-500 mt-1">Track your monthly expenses and fixed costs.</p>
+                    <p className="text-slate-500 mt-1">Track your income, expenses, and fixed costs.</p>
                 </div>
                 
                 <div className="flex items-center bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200">
@@ -261,37 +292,96 @@ const BudgetPage = () => {
             </div>
 
             {/* Overview Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-sm font-medium text-slate-500 mb-1">Total Income</p>
+                    <p className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <p className="text-sm font-medium text-slate-500 mb-1">Total Budget</p>
-                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalBudget)}</p>
+                    <p className="text-sm font-medium text-slate-500 mb-1">Total Budget (Exp)</p>
+                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalExpenseBudget)}</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
                     <p className="text-sm font-medium text-slate-500 mb-1">Total Spent</p>
-                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalSpent)}</p>
+                    <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalExpense)}</p>
                 </div>
                 <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-                    <p className="text-sm font-medium text-slate-500 mb-1">Remaining</p>
-                    <p className={cn("text-2xl font-bold", totalBudget - totalSpent >= 0 ? "text-green-600" : "text-red-500")}>
-                        {formatCurrency(totalBudget - totalSpent)}
+                    <p className="text-sm font-medium text-slate-500 mb-1">Net Profit</p>
+                    <p className={cn("text-2xl font-bold", totalIncome - totalExpense >= 0 ? "text-blue-600" : "text-red-500")}>
+                        {formatCurrency(totalIncome - totalExpense)}
                     </p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* 1. Budget Status (Left Column) */}
+                {/* 1. Status Column (Left) */}
                 <div className="lg:col-span-1 space-y-8">
-                    {/* Budget Progress */}
+                    
+                    {/* Income Status */}
                     <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col h-fit">
                         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
-                            <h2 className="text-lg font-bold text-slate-800">Budget Status</h2>
-                            <button 
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <ArrowUpRight size={18} className="text-green-500"/>
+                                Income Status
+                            </h2>
+                             <button 
                                 onClick={() => setIsCategoryModalOpen(true)}
                                 className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                 title="Manage Categories"
                             >
                                 <Settings size={18} />
                             </button>
+                        </div>
+                        
+                        <div className="p-6 space-y-6">
+                            {categories.filter(c => c.type === 'INCOME').map(category => {
+                                const stats = getCategoryStats(category.name);
+                                const percent = stats.percent;
+
+                                return (
+                                    <div key={category.id} className="group">
+                                        <div className="flex justify-between items-end mb-2">
+                                            <span className="font-semibold text-slate-700 text-sm">{category.name}</span>
+                                            <div className="flex items-center space-x-1 text-sm">
+                                                <input 
+                                                    type="number" 
+                                                    defaultValue={stats.budgetAmount || 0}
+                                                    disabled={useCustomDateRange}
+                                                    onBlur={(e) => handleBudgetUpdate(category.id, Number(e.target.value))}
+                                                    className={cn(
+                                                        "w-20 text-right font-medium text-slate-900 border-b border-dashed border-slate-300 focus:outline-none bg-transparent transition-colors py-0.5",
+                                                        useCustomDateRange ? "opacity-50 cursor-not-allowed border-transparent" : "hover:border-blue-500 focus:border-blue-500"
+                                                    )}
+                                                />
+                                                <span className="text-slate-400 font-light">/ {formatCurrency(stats.actualAmount)}</span>
+                                            </div>
+                                        </div>
+                                        {/* Progress Bar for Income */}
+                                        <div className="relative w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+                                            <div 
+                                                className={cn(
+                                                    "h-full rounded-full transition-all duration-500 ease-out", 
+                                                    percent >= 100 ? "bg-green-500" : "bg-blue-400"
+                                                )}
+                                                style={{ width: `${Math.min(percent, 100)}%` }}
+                                            ></div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {categories.filter(c => c.type === 'INCOME').length === 0 && (
+                                <p className="text-center text-slate-400 text-sm">No income categories found.</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Expense Budget Status */}
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 flex flex-col h-fit">
+                        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 rounded-t-2xl">
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <ArrowDownLeft size={18} className="text-red-500"/>
+                                Expense Budget
+                            </h2>
                         </div>
                         
                         <div className="p-6 space-y-6">
@@ -314,10 +404,10 @@ const BudgetPage = () => {
                                                         useCustomDateRange ? "opacity-50 cursor-not-allowed border-transparent" : "hover:border-blue-500 focus:border-blue-500"
                                                     )}
                                                 />
-                                                <span className="text-slate-400 font-light">/ {formatCurrency(stats.spentAmount)}</span>
+                                                <span className="text-slate-400 font-light">/ {formatCurrency(stats.actualAmount)}</span>
                                             </div>
                                         </div>
-                                        {/* Progress Bar */}
+                                        {/* Progress Bar for Expense */}
                                         <div className="relative w-full bg-slate-100 rounded-full h-3 overflow-hidden">
                                             <div 
                                                 className={cn(
@@ -395,18 +485,22 @@ const BudgetPage = () => {
 
                         {/* Filters Row */}
                         <div className="flex flex-wrap items-center gap-4">
-                            {/* Card Filter */}
+                            {/* Account/Method Filter */}
                             <div className="flex items-center gap-2">
-                                <CreditCard size={16} className="text-slate-400" />
+                                <Wallet size={16} className="text-slate-400" />
                                 <select
-                                    value={selectedCardFilter || ''}
-                                    onChange={(e) => setSelectedCardFilter(e.target.value ? Number(e.target.value) : null)}
-                                    className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                                    value={filterType}
+                                    onChange={(e) => setFilterType(e.target.value)}
+                                    className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white min-w-[140px]"
                                 >
-                                    <option value="">All Cards</option>
-                                    {cards.map(card => (
-                                        <option key={card.id} value={card.id}>{card.name}</option>
-                                    ))}
+                                    <option value="ALL">All Transactions</option>
+                                    <option value="CASH">Cash Only</option>
+                                    <option value="BANK_TRANSFER">Transfer Only</option>
+                                    <optgroup label="Cards">
+                                        {cards.map(card => (
+                                            <option key={card.id} value={`card_${card.id}`}>{card.name}</option>
+                                        ))}
+                                    </optgroup>
                                 </select>
                             </div>
 
@@ -445,10 +539,10 @@ const BudgetPage = () => {
                             )}
 
                             {/* Clear Filters */}
-                            {(selectedCardFilter || useCustomDateRange) && (
+                            {(filterType !== 'ALL' || useCustomDateRange) && (
                                 <button
                                     onClick={() => {
-                                        setSelectedCardFilter(null);
+                                        setFilterType('ALL');
                                         setUseCustomDateRange(false);
                                     }}
                                     className="text-xs text-slate-400 hover:text-red-500 flex items-center gap-1"
@@ -460,9 +554,12 @@ const BudgetPage = () => {
                         </div>
 
                         {/* Active Filter Info */}
-                        {(selectedCardFilter || useCustomDateRange) && (
+                        {(filterType !== 'ALL' || useCustomDateRange) && (
                             <div className="text-xs text-slate-500 bg-blue-50 px-3 py-2 rounded-lg">
-                                Showing: {selectedCardFilter ? cards.find(c => c.id === selectedCardFilter)?.name : 'All Cards'}
+                                Showing: {filterType === 'ALL' ? 'All' : 
+                                         filterType === 'CASH' ? 'Cash Only' :
+                                         filterType === 'BANK_TRANSFER' ? 'Transfers' :
+                                         cards.find(c => `card_${c.id}` === filterType)?.name}
                                 {' · '}
                                 {useCustomDateRange ? `${filterStartDate} ~ ${filterEndDate}` : format(currentDate, 'MMMM yyyy')}
                                 {' · '}
@@ -598,7 +695,10 @@ const BudgetPage = () => {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-right font-bold text-slate-900">
+                                            <td className={cn(
+                                                "px-6 py-4 text-right font-bold",
+                                                tx.amount < 0 ? "text-slate-900" : "text-green-600"
+                                            )}>
                                                 {formatCurrency(tx.amount)}
                                             </td>
                                             <td className="px-6 py-4 text-center">
