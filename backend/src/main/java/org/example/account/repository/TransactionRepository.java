@@ -19,4 +19,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT t FROM Transaction t WHERE t.card.id = :cardId")
     List<Transaction> findByCardId(@Param("cardId") Long cardId);
+
+    boolean existsByRecurringTransactionIdAndDateBetween(Long recurringTransactionId, LocalDate startDate, LocalDate endDate);
 }

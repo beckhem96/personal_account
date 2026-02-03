@@ -42,7 +42,7 @@ personal_account/
 │   ├── repository/        # 6개 JPA 리포지토리 (JpaRepository 인터페이스)
 │   ├── domain/            # 9개 JPA 엔티티 + Enum
 │   ├── dto/               # Request/Response DTO (Java record)
-│   └── config/            # DataInitializer (기본 카테고리 시드 데이터)
+│   └── config/            # DataInitializer (기본 카테고리 시드 데이터), SchedulingConfig (@EnableScheduling)
 ├── frontend/src/
 │   ├── pages/             # Dashboard.tsx, Budget.tsx, Assets.tsx, Tax.tsx
 │   ├── components/        # Layout.tsx (사이드바 + 네비게이션)
@@ -116,11 +116,11 @@ personal_account/
 
 ### 핵심 엔티티
 - **Category (카테고리)** — `INCOME | EXPENSE | TRANSFER`. 앱 시작 시 10개 기본값 자동 생성.
-- **Transaction (거래 내역)** — date, amount, memo, paymentMethod, category(FK), card(FK, nullable), isConfirmed(예정/확정 구분)
+- **Transaction (거래 내역)** — date, amount, memo, paymentMethod, category(FK), card(FK, nullable), recurringTransaction(FK, nullable), isConfirmed(예정/확정 구분)
 - **Budget (예산)** — year, month, amount, category(FK). (year, month, category) 유니크 제약.
 - **Asset (자산)** — type(`CASH | SAVINGS | STOCK | DEBT`), name, balance, purchasePrice(nullable, 주식용)
 - **Card (카드)** — name, type(`CREDIT | CHECK`)
-- **RecurringTransaction (고정 비용)** — name, amount, dayOfMonth, paymentMethod, card(FK, nullable), category(FK). 생성 시 해당 월의 Transaction 자동 생성.
+- **RecurringTransaction (고정 비용)** — name, amount, dayOfMonth, paymentMethod, card(FK, nullable), category(FK). 생성 시 해당 월의 Transaction 자동 생성. 매월 1일 스케줄러 및 앱 시작 시 자동 생성.
 
 ### Enum 목록
 - `TransactionType`: INCOME, EXPENSE, TRANSFER
@@ -201,7 +201,7 @@ npm run dev              # 개발 서버 (HMR 지원)
 
 ## 로드맵 (미구현)
 
-- [ ] 고정 비용 월별 자동 생성 (Spring Scheduler 활용)
+- [x] 고정 비용 월별 자동 생성 (Spring Scheduler 활용)
 - [ ] 실제 거래 데이터 기반 연말정산 자동 연동
 - [ ] 거래 생성/확정 시 자산 잔액 자동 업데이트
 - [ ] 성능 최적화 및 분석 기능

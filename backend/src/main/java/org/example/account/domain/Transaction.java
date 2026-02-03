@@ -37,6 +37,10 @@ public class Transaction {
     @JoinColumn(name = "card_id")
     private Card card; // Optional: Only if PaymentMethod is CARD
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_transaction_id")
+    private RecurringTransaction recurringTransaction;
+
     @Column(nullable = false)
     private boolean isConfirmed;
 
@@ -57,6 +61,10 @@ public class Transaction {
 
     public void confirm() {
         this.isConfirmed = true;
+    }
+
+    public void associateRecurringTransaction(RecurringTransaction recurringTransaction) {
+        this.recurringTransaction = recurringTransaction;
     }
 
     public void update(LocalDate date, BigDecimal amount, String memo, PaymentMethod paymentMethod, Category category, Card card) {
