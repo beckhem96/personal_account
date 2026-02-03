@@ -42,4 +42,13 @@ public class BudgetService {
                 .map(BudgetResponse::from)
                 .collect(Collectors.toList());
     }
+
+    public List<BudgetResponse> getBudgetsByPeriod(java.time.LocalDate startDate, java.time.LocalDate endDate) {
+        int startTotal = startDate.getYear() * 12 + startDate.getMonthValue();
+        int endTotal = endDate.getYear() * 12 + endDate.getMonthValue();
+        
+        return budgetRepository.findBudgetsBetween(startTotal, endTotal).stream()
+                .map(BudgetResponse::from)
+                .collect(Collectors.toList());
+    }
 }

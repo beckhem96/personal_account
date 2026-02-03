@@ -9,4 +9,7 @@ import java.util.Optional;
 public interface BudgetRepository extends JpaRepository<Budget, Long> {
     List<Budget> findByYearAndMonth(Integer year, Integer month);
     Optional<Budget> findByYearAndMonthAndCategoryId(Integer year, Integer month, Long categoryId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT b FROM Budget b WHERE (b.year * 12 + b.month) >= :startTotalMonths AND (b.year * 12 + b.month) <= :endTotalMonths")
+    List<Budget> findBudgetsBetween(Integer startTotalMonths, Integer endTotalMonths);
 }

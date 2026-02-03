@@ -123,12 +123,12 @@ const Dashboard = () => {
                                     dataKey="value"
                                     cornerRadius={6}
                                 >
-                                    {chartData.map((entry, index) => (
+                                    {chartData.map((_, index) => (
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                                     ))}
                                 </Pie>
                                 <Tooltip 
-                                    formatter={(value: number) => formatCurrency(value)}
+                                    formatter={(value: number | undefined) => formatCurrency(value || 0)}
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
                                 <Legend verticalAlign="bottom" height={36}/>

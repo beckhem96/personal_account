@@ -35,6 +35,7 @@ export interface Budget {
     month: number;
     amount: number;
     categoryName: string;
+    categoryId: number;
 }
 
 export interface BudgetRequest {
@@ -136,3 +137,11 @@ export interface YearEndSettlementResponse {
     estimatedDeduction: number;
     guideMessage: string;
 }
+
+// Aliases for Response types to match conventions
+export type CategoryResponse = Category;
+export type BudgetResponse = Budget;
+export type TransactionResponse = Transaction;
+export type AssetResponse = Asset;
+export type CardResponse = Card;
+export type RecurringTransactionResponse = RecurringTransaction;

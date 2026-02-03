@@ -52,8 +52,8 @@ export const deleteRecurringTransaction = async (id: number) => {
 };
 
 // Budgets
-export const getBudgets = async (year: number, month: number) => {
-    const response = await api.get<BudgetResponse[]>('/budgets', { params: { year, month } });
+export const getBudgets = async (params: { year?: number, month?: number, startDate?: string, endDate?: string }) => {
+    const response = await api.get<BudgetResponse[]>('/budgets', { params });
     return response.data;
 };
 

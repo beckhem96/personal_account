@@ -72,12 +72,24 @@ const BudgetPage = () => {
             const start = useCustomDateRange ? filterStartDate : format(startOfMonth(currentDate), 'yyyy-MM-dd');
             const end = useCustomDateRange ? filterEndDate : format(endOfMonth(currentDate), 'yyyy-MM-dd');
 
-            const [bData, cData, cardData, rData] = await Promise.all([
-                getBudgets(year, month),
+            const [rawBudgets, cData, cardData, rData] = await Promise.all([
+                getBudgets(useCustomDateRange ? { startDate: start, endDate: end } : { year, month }),
                 getCategories(),
                 getCards(),
                 getRecurringTransactions()
             ]);
+
+            // Aggregate budgets by category if custom range is used
+            const bData = useCustomDateRange
+                ? Object.values(rawBudgets.reduce((acc, curr) => {
+                    if (!acc[curr.categoryId]) {
+                        acc[curr.categoryId] = { ...curr };
+                    } else {
+                        acc[curr.categoryId].amount += curr.amount;
+                    }
+                    return acc;
+                }, {} as Record<number, BudgetResponse>))
+                : rawBudgets;
 
             // 카드 필터가 선택된 경우 카드별 조회, 아니면 전체 조회
             const tData = selectedCardFilter
@@ -295,8 +307,12 @@ const BudgetPage = () => {
                                                 <input 
                                                     type="number" 
                                                     defaultValue={stats.budgetAmount || 0}
+                                                    disabled={useCustomDateRange}
                                                     onBlur={(e) => handleBudgetUpdate(category.id, Number(e.target.value))}
-                                                    className="w-20 text-right font-medium text-slate-900 border-b border-dashed border-slate-300 hover:border-blue-500 focus:border-blue-500 focus:outline-none bg-transparent transition-colors py-0.5"
+                                                    className={cn(
+                                                        "w-20 text-right font-medium text-slate-900 border-b border-dashed border-slate-300 focus:outline-none bg-transparent transition-colors py-0.5",
+                                                        useCustomDateRange ? "opacity-50 cursor-not-allowed border-transparent" : "hover:border-blue-500 focus:border-blue-500"
+                                                    )}
                                                 />
                                                 <span className="text-slate-400 font-light">/ {formatCurrency(stats.spentAmount)}</span>
                                             </div>

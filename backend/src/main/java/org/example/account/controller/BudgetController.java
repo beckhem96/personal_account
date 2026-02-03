@@ -7,6 +7,7 @@ import org.example.account.service.BudgetService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -23,9 +24,17 @@ public class BudgetController {
 
     @GetMapping
     public ResponseEntity<List<BudgetResponse>> getBudgets(
-            @RequestParam Integer year,
-            @RequestParam Integer month
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
-        return ResponseEntity.ok(budgetService.getMonthlyBudgets(year, month));
+        if (startDate != null && endDate != null) {
+            return ResponseEntity.ok(budgetService.getBudgetsByPeriod(startDate, endDate));
+        }
+        if (year != null && month != null) {
+            return ResponseEntity.ok(budgetService.getMonthlyBudgets(year, month));
+        }
+        return ResponseEntity.badRequest().build();
     }
 }
