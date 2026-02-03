@@ -697,7 +697,7 @@ const BudgetPage = () => {
                                             </td>
                                             <td className={cn(
                                                 "px-6 py-4 text-right font-bold",
-                                                tx.amount < 0 ? "text-slate-900" : "text-green-600"
+                                                categories.find(c => c.name === tx.categoryName)?.type === 'INCOME' ? "text-green-600" : "text-red-500"
                                             )}>
                                                 {formatCurrency(tx.amount)}
                                             </td>
