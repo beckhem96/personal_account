@@ -32,6 +32,17 @@ public class AssetController {
         return ResponseEntity.ok(assetService.getAllAssets());
     }
 
+    @PatchMapping("/{id}/set-default")
+    public ResponseEntity<AssetResponse> setDefaultAsset(@PathVariable Long id) {
+        return ResponseEntity.ok(assetService.setDefaultAsset(id));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteAsset(@PathVariable Long id) {
+        assetService.deleteAsset(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/net-worth")
     public ResponseEntity<NetWorthResponse> getNetWorth() {
         return ResponseEntity.ok(assetService.calculateNetWorth());

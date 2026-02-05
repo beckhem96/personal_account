@@ -29,6 +29,9 @@ public class Asset {
     // For Stocks
     private BigDecimal purchasePrice; // 매수 금액 (수익률 계산용)
 
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean isDefault = false;
+
     public Asset(AssetType type, String name, BigDecimal balance, BigDecimal purchasePrice) {
         this.type = type;
         this.name = name;
@@ -36,9 +39,29 @@ public class Asset {
         this.purchasePrice = purchasePrice;
     }
 
+    public Asset(AssetType type, String name, BigDecimal balance, BigDecimal purchasePrice, boolean isDefault) {
+        this.type = type;
+        this.name = name;
+        this.balance = balance;
+        this.purchasePrice = purchasePrice;
+        this.isDefault = isDefault;
+    }
+
+    public void setDefault(boolean isDefault) {
+        this.isDefault = isDefault;
+    }
+
     public void update(String name, BigDecimal balance, BigDecimal purchasePrice) {
         this.name = name;
         this.balance = balance;
         this.purchasePrice = purchasePrice;
+    }
+
+    public void addBalance(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
+    }
+
+    public void subtractBalance(BigDecimal amount) {
+        this.balance = this.balance.subtract(amount);
     }
 }

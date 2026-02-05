@@ -23,4 +23,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByCardId(@Param("cardId") Long cardId);
 
     boolean existsByRecurringTransactionIdAndDateBetween(Long recurringTransactionId, LocalDate startDate, LocalDate endDate);
+
+    List<Transaction> findByRecurringTransactionIdAndIsConfirmedFalseAndDateBetween(Long recurringTransactionId, LocalDate startDate, LocalDate endDate);
+
+    List<Transaction> findByAssetId(Long assetId);
+
+    List<Transaction> findByToAssetId(Long toAssetId);
+
+    boolean existsByCategoryId(Long categoryId);
 }

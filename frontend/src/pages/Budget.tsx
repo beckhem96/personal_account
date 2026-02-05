@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import {
     getBudgets, getCategories, getTransactions, createTransaction, updateTransaction, deleteTransaction, setBudget, createCategory,
-    getCards, getRecurringTransactions, createRecurringTransaction, deleteRecurringTransaction, getTransactionsByCard
+    getCards, getRecurringTransactions, createRecurringTransaction, updateRecurringTransaction, deleteRecurringTransaction, getTransactionsByCard, getAssets,
+    applyRecurringTransactions, applySingleRecurringTransaction
 } from '../api/services';
-import type { 
+import type {
     BudgetResponse, CategoryResponse, TransactionResponse, TransactionType, PaymentMethod,
-    Card, RecurringTransaction, RecurringTransactionRequest, TransactionRequest
+    Card, RecurringTransaction, RecurringTransactionRequest, TransactionRequest, Asset
 } from '../types';
-import { formatCurrency, cn } from '../utils';
+import { formatCurrency, formatNumber, evaluateExpr, formatExpr, cn } from '../utils';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
-import { Plus, Settings, Calendar, CreditCard, Banknote, Landmark, X, ChevronLeft, ChevronRight, Repeat, Trash2, Edit2, Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Plus, Settings, Calendar, CreditCard, Banknote, Landmark, X, ChevronLeft, ChevronRight, Repeat, Trash2, Edit2, Wallet, ArrowUpRight, ArrowDownLeft, Play } from 'lucide-react';
 
 const BudgetPage = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -18,7 +19,8 @@ const BudgetPage = () => {
     const [transactions, setTransactions] = useState<TransactionResponse[]>([]);
     const [cards, setCards] = useState<Card[]>([]);
     const [recurringTxs, setRecurringTxs] = useState<RecurringTransaction[]>([]);
-    
+    const [assets, setAssets] = useState<Asset[]>([]);
+
     // UI State
     const [isTxFormOpen, setIsTxFormOpen] = useState(false);
     const [editingTx, setEditingTx] = useState<TransactionResponse | null>(null);
@@ -32,7 +34,10 @@ const BudgetPage = () => {
 
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isRecurringModalOpen, setIsRecurringModalOpen] = useState(false);
+    const [editingRecurring, setEditingRecurring] = useState<RecurringTransaction | null>(null);
     
+    const [amountExpr, setAmountExpr] = useState('');
+
     // Forms
     const [txForm, setTxForm] = useState<TransactionRequest>({
         amount: 0,
@@ -41,10 +46,14 @@ const BudgetPage = () => {
         paymentMethod: 'CARD',
         date: format(new Date(), 'yyyy-MM-dd'),
         isConfirmed: true,
-        cardId: undefined
+        cardId: undefined,
+        assetId: undefined,
+        toAssetId: undefined
     });
 
     const [newCategory, setNewCategory] = useState({ name: '', type: 'EXPENSE' as TransactionType });
+
+    const [recurringAmountExpr, setRecurringAmountExpr] = useState('');
 
     const [newRecurring, setNewRecurring] = useState<RecurringTransactionRequest>({
         name: '',
@@ -52,8 +61,14 @@ const BudgetPage = () => {
         dayOfMonth: 1,
         paymentMethod: 'CARD',
         categoryId: 0,
-        cardId: undefined
+        cardId: undefined,
+        assetId: undefined,
+        toAssetId: undefined,
+        startDate: undefined,
+        endDate: undefined
     });
+
+    const [isApplying, setIsApplying] = useState(false);
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth() + 1;
@@ -70,16 +85,20 @@ const BudgetPage = () => {
         }
     }, [currentDate, useCustomDateRange]);
 
+    const hasOperator = /[+\-*/]/.test(amountExpr.replace(/^-/, ''));
+    const computedAmount = evaluateExpr(amountExpr);
+
     const fetchData = async () => {
         try {
             const start = useCustomDateRange ? filterStartDate : format(startOfMonth(currentDate), 'yyyy-MM-dd');
             const end = useCustomDateRange ? filterEndDate : format(endOfMonth(currentDate), 'yyyy-MM-dd');
 
-            const [rawBudgets, cData, cardData, rData] = await Promise.all([
+            const [rawBudgets, cData, cardData, rData, assetData] = await Promise.all([
                 getBudgets(useCustomDateRange ? { startDate: start, endDate: end } : { year, month }),
                 getCategories(),
                 getCards(),
-                getRecurringTransactions()
+                getRecurringTransactions(),
+                getAssets()
             ]);
 
             // Aggregate budgets by category if custom range is used
@@ -112,6 +131,7 @@ const BudgetPage = () => {
             setTransactions(tData);
             setCards(cardData);
             setRecurringTxs(rData);
+            setAssets(assetData);
         } catch (error) {
             console.error(error);
         }
@@ -126,12 +146,18 @@ const BudgetPage = () => {
     const handleTxSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!txForm.categoryId) return alert("Please select a category.");
+        const finalAmount = computedAmount ?? Number(txForm.amount);
+        if (!finalAmount || finalAmount <= 0) return alert("유효한 금액을 입력하세요.");
         try {
+            const selectedCat = categories.find(c => c.id === Number(txForm.categoryId));
+            const needsAssetTransfer = selectedCat?.type === 'TRANSFER' || selectedCat?.name === '저축/투자';
             const payload = {
                 ...txForm,
-                amount: Number(txForm.amount),
+                amount: finalAmount,
                 categoryId: Number(txForm.categoryId),
-                cardId: txForm.paymentMethod === 'CARD' && txForm.cardId ? Number(txForm.cardId) : undefined
+                cardId: txForm.paymentMethod === 'CARD' && txForm.cardId ? Number(txForm.cardId) : undefined,
+                assetId: needsAssetTransfer && txForm.assetId ? Number(txForm.assetId) : undefined,
+                toAssetId: needsAssetTransfer && txForm.toAssetId ? Number(txForm.toAssetId) : undefined
             };
 
             if (editingTx) {
@@ -151,6 +177,7 @@ const BudgetPage = () => {
 
     const handleEditTx = (tx: TransactionResponse) => {
         setEditingTx(tx);
+        setAmountExpr(formatNumber(tx.amount));
         setTxForm({
             date: tx.date,
             amount: tx.amount,
@@ -158,7 +185,9 @@ const BudgetPage = () => {
             paymentMethod: tx.paymentMethod,
             categoryId: tx.categoryId,
             isConfirmed: tx.isConfirmed,
-            cardId: tx.cardId
+            cardId: tx.cardId,
+            assetId: tx.assetId,
+            toAssetId: tx.toAssetId
         });
         setIsTxFormOpen(true);
     };
@@ -174,6 +203,7 @@ const BudgetPage = () => {
     };
 
     const resetTxForm = () => {
+        setAmountExpr('');
         setTxForm({
             amount: 0,
             memo: '',
@@ -181,7 +211,9 @@ const BudgetPage = () => {
             paymentMethod: 'CARD',
             date: format(new Date(), 'yyyy-MM-dd'),
             isConfirmed: true,
-            cardId: undefined
+            cardId: undefined,
+            assetId: undefined,
+            toAssetId: undefined
         });
     };
 
@@ -206,17 +238,71 @@ const BudgetPage = () => {
         }
     };
 
-    const handleCreateRecurring = async (e: React.FormEvent) => {
+    const handleRecurringSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await createRecurringTransaction({
+            const payload = {
                 ...newRecurring,
                 cardId: newRecurring.paymentMethod === 'CARD' ? newRecurring.cardId : undefined
-            });
+            };
+            if (editingRecurring) {
+                await updateRecurringTransaction(editingRecurring.id, payload);
+            } else {
+                await createRecurringTransaction(payload);
+            }
             setIsRecurringModalOpen(false);
+            setEditingRecurring(null);
+            setRecurringAmountExpr('');
             fetchData();
         } catch (error) {
-            alert('Failed to create recurring transaction');
+            alert(editingRecurring ? 'Failed to update recurring transaction' : 'Failed to create recurring transaction');
+        }
+    };
+
+    const handleEditRecurring = (rt: RecurringTransaction) => {
+        setEditingRecurring(rt);
+        setRecurringAmountExpr(formatNumber(rt.amount));
+        setNewRecurring({
+            name: rt.name,
+            amount: rt.amount,
+            dayOfMonth: rt.dayOfMonth,
+            paymentMethod: rt.paymentMethod,
+            categoryId: rt.categoryId,
+            cardId: rt.cardId,
+            assetId: rt.assetId,
+            toAssetId: rt.toAssetId,
+            startDate: rt.startDate,
+            endDate: rt.endDate
+        });
+        setIsRecurringModalOpen(true);
+    };
+
+    const handleApplyRecurring = async () => {
+        if (isApplying) return;
+        setIsApplying(true);
+        try {
+            const result = await applyRecurringTransactions();
+            alert(`고정비용 일괄 적용 완료: ${result.appliedCount}건 생성, ${result.deletedCount}건 삭제`);
+            fetchData();
+        } catch (error) {
+            alert('고정비용 일괄 적용 실패');
+        } finally {
+            setIsApplying(false);
+        }
+    };
+
+    const handleApplySingleRecurring = async (id: number, name: string) => {
+        try {
+            const result = await applySingleRecurringTransaction(id);
+            if (result.deletedCount > 0) {
+                alert(`"${name}" 고정비용이 기간 만료로 삭제되었습니다.`);
+            } else if (result.appliedCount > 0) {
+                alert(`"${name}" 고정비용이 적용되었습니다.`);
+            }
+            fetchData();
+        } catch (error: any) {
+            const message = error.response?.data?.message || error.message || '적용 실패';
+            alert(message);
         }
     };
 
@@ -257,6 +343,15 @@ const BudgetPage = () => {
             return cat?.type === 'EXPENSE';
         })
         .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const selectedCategory = categories.find(c => c.id === Number(txForm.categoryId));
+    const selectedCategoryType = selectedCategory?.type;
+    const selectedCategoryName = selectedCategory?.name;
+    const isAssetTransfer = selectedCategoryType === 'TRANSFER' || selectedCategoryName === '저축/투자';
+
+    // 고정비용 모달용
+    const selectedRecurringCategory = categories.find(c => c.id === Number(newRecurring.categoryId));
+    const isRecurringAssetTransfer = selectedRecurringCategory?.type === 'TRANSFER' || selectedRecurringCategory?.name === '저축/투자';
 
     // Filtered Budget Total (Only Expenses)
     const totalExpenseBudget = budgets
@@ -430,12 +525,32 @@ const BudgetPage = () => {
                                 <Repeat size={18} className="text-purple-500"/>
                                 Fixed Costs
                             </h2>
-                            <button 
-                                onClick={() => setIsRecurringModalOpen(true)}
-                                className="text-xs font-semibold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800"
-                            >
-                                + Add
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={handleApplyRecurring}
+                                    disabled={isApplying}
+                                    className={cn(
+                                        "text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1",
+                                        isApplying
+                                            ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                                            : "bg-green-600 text-white hover:bg-green-700"
+                                    )}
+                                >
+                                    <Play size={12} />
+                                    {isApplying ? '적용 중...' : '일괄 적용'}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setEditingRecurring(null);
+                                        setRecurringAmountExpr('');
+                                        setNewRecurring({ name: '', amount: 0, dayOfMonth: 1, paymentMethod: 'CARD', categoryId: 0, cardId: undefined, assetId: undefined, toAssetId: undefined, startDate: undefined, endDate: undefined });
+                                        setIsRecurringModalOpen(true);
+                                    }}
+                                    className="text-xs font-semibold bg-slate-900 text-white px-3 py-1.5 rounded-lg hover:bg-slate-800"
+                                >
+                                    + Add
+                                </button>
+                            </div>
                         </div>
                         <div className="p-6 space-y-4">
                             {recurringTxs.map(rt => (
@@ -447,15 +562,36 @@ const BudgetPage = () => {
                                             <span>{rt.categoryName}</span>
                                             {rt.cardName && <span>· {rt.cardName}</span>}
                                         </div>
+                                        {(rt.startDate || rt.endDate) && (
+                                            <div className="flex items-center gap-1 text-xs text-purple-500 mt-1">
+                                                <Calendar size={10} />
+                                                <span>{rt.startDate || '시작일 없음'} ~ {rt.endDate || '종료일 없음'}</span>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="text-right">
+                                    <div className="flex items-center gap-2">
                                         <p className="font-bold text-slate-900 text-sm">{formatCurrency(rt.amount)}</p>
-                                        <button 
-                                            onClick={() => handleDeleteRecurring(rt.id)}
-                                            className="text-slate-300 hover:text-red-500 text-xs mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                            Delete
-                                        </button>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => handleApplySingleRecurring(rt.id, rt.name)}
+                                                className="p-1 text-slate-300 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                title="이번 달에 적용"
+                                            >
+                                                <Play size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleEditRecurring(rt)}
+                                                className="p-1 text-slate-300 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteRecurring(rt.id)}
+                                                className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -605,14 +741,23 @@ const BudgetPage = () => {
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Amount</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
                                         required
-                                        placeholder="0"
-                                        value={txForm.amount}
-                                        onChange={e => setTxForm({...txForm, amount: Number(e.target.value)})}
+                                        placeholder="예: 2,000 + 3,000"
+                                        value={amountExpr}
+                                        onChange={e => {
+                                            const formatted = formatExpr(e.target.value);
+                                            setAmountExpr(formatted);
+                                            const val = evaluateExpr(formatted);
+                                            if (val !== null) setTxForm({...txForm, amount: val});
+                                        }}
                                         className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
                                     />
+                                    {hasOperator && computedAmount !== null && (
+                                        <p className="text-xs text-blue-600 font-medium mt-1">= {formatCurrency(computedAmount)}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Method</label>
@@ -629,7 +774,7 @@ const BudgetPage = () => {
                                 {txForm.paymentMethod === 'CARD' && (
                                     <div className="md:col-span-2">
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Select Card</label>
-                                        <select 
+                                        <select
                                             value={txForm.cardId || ''}
                                             onChange={e => setTxForm({...txForm, cardId: Number(e.target.value)})}
                                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
@@ -640,6 +785,36 @@ const BudgetPage = () => {
                                             ))}
                                         </select>
                                     </div>
+                                )}
+                                {isAssetTransfer && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Asset (From)</label>
+                                            <select
+                                                value={txForm.assetId || ''}
+                                                onChange={e => setTxForm({...txForm, assetId: e.target.value ? Number(e.target.value) : undefined})}
+                                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                                            >
+                                                <option value="">Select From Asset...</option>
+                                                {assets.map(a => (
+                                                    <option key={a.id} value={a.id}>{a.name} ({formatCurrency(a.balance)})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">To Asset</label>
+                                            <select
+                                                value={txForm.toAssetId || ''}
+                                                onChange={e => setTxForm({...txForm, toAssetId: e.target.value ? Number(e.target.value) : undefined})}
+                                                className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white"
+                                            >
+                                                <option value="">Select To Asset...</option>
+                                                {assets.map(a => (
+                                                    <option key={a.id} value={a.id}>{a.name} ({formatCurrency(a.balance)})</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </>
                                 )}
                                 <div className="md:col-span-2">
                                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Memo</label>
@@ -688,10 +863,12 @@ const BudgetPage = () => {
                                                 <div className="flex flex-col">
                                                     <span className="text-slate-900 font-medium">{tx.memo || '-'}</span>
                                                     <div className="flex items-center gap-1 text-[10px] text-slate-400 mt-0.5">
-                                                        {tx.paymentMethod === 'CARD' ? <CreditCard size={10} /> : 
+                                                        {tx.paymentMethod === 'CARD' ? <CreditCard size={10} /> :
                                                          tx.paymentMethod === 'CASH' ? <Banknote size={10} /> : <Landmark size={10} />}
                                                         <span>{tx.paymentMethod}</span>
                                                         {tx.cardName && <span className="text-blue-500 font-medium">· {tx.cardName}</span>}
+                                                        {tx.assetName && <span className="text-purple-500 font-medium">· {tx.assetName}</span>}
+                                                        {tx.toAssetName && <span className="text-green-500 font-medium">→ {tx.toAssetName}</span>}
                                                     </div>
                                                 </div>
                                             </td>
@@ -769,14 +946,14 @@ const BudgetPage = () => {
             {/* Recurring Transaction Modal */}
             {isRecurringModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => setIsRecurringModalOpen(false)} />
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={() => { setIsRecurringModalOpen(false); setEditingRecurring(null); }} />
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 relative animate-in zoom-in-95 duration-200">
-                        <button onClick={() => setIsRecurringModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-800">
+                        <button onClick={() => { setIsRecurringModalOpen(false); setEditingRecurring(null); }} className="absolute top-6 right-6 text-slate-400 hover:text-slate-800">
                             <X size={20}/>
                         </button>
-                        <h3 className="text-xl font-bold mb-6 text-slate-900">Add Fixed Cost</h3>
-                        
-                        <form onSubmit={handleCreateRecurring} className="space-y-4">
+                        <h3 className="text-xl font-bold mb-6 text-slate-900">{editingRecurring ? 'Edit Fixed Cost' : 'Add Fixed Cost'}</h3>
+
+                        <form onSubmit={handleRecurringSubmit} className="space-y-4">
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-1">Name</label>
                                 <input 
@@ -790,12 +967,23 @@ const BudgetPage = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Amount</label>
-                                    <input 
-                                        type="number" required
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        required
+                                        placeholder="예: 10,000"
                                         className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={newRecurring.amount}
-                                        onChange={e => setNewRecurring({...newRecurring, amount: Number(e.target.value)})}
+                                        value={recurringAmountExpr}
+                                        onChange={e => {
+                                            const formatted = formatExpr(e.target.value);
+                                            setRecurringAmountExpr(formatted);
+                                            const val = evaluateExpr(formatted);
+                                            if (val !== null) setNewRecurring({...newRecurring, amount: val});
+                                        }}
                                     />
+                                    {/[+\-*/]/.test(recurringAmountExpr.replace(/^-/, '')) && evaluateExpr(recurringAmountExpr) !== null && (
+                                        <p className="text-xs text-blue-600 font-medium mt-1">= {formatCurrency(evaluateExpr(recurringAmountExpr)!)}</p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Day of Month</label>
@@ -836,7 +1024,7 @@ const BudgetPage = () => {
                             {newRecurring.paymentMethod === 'CARD' && (
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-1">Select Card</label>
-                                    <select 
+                                    <select
                                         className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                         value={newRecurring.cardId || ''}
                                         onChange={e => setNewRecurring({...newRecurring, cardId: Number(e.target.value)})}
@@ -848,8 +1036,59 @@ const BudgetPage = () => {
                                     </select>
                                 </div>
                             )}
+                            {isRecurringAssetTransfer && (
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-1">출금 자산</label>
+                                        <select
+                                            className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={newRecurring.assetId || ''}
+                                            onChange={e => setNewRecurring({...newRecurring, assetId: e.target.value ? Number(e.target.value) : undefined})}
+                                        >
+                                            <option value="">Select From Asset...</option>
+                                            {assets.map(a => (
+                                                <option key={a.id} value={a.id}>{a.name} ({formatCurrency(a.balance)})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-semibold text-slate-700 mb-1">입금 자산</label>
+                                        <select
+                                            className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={newRecurring.toAssetId || ''}
+                                            onChange={e => setNewRecurring({...newRecurring, toAssetId: e.target.value ? Number(e.target.value) : undefined})}
+                                        >
+                                            <option value="">Select To Asset...</option>
+                                            {assets.map(a => (
+                                                <option key={a.id} value={a.id}>{a.name} ({formatCurrency(a.balance)})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">시작일 (선택)</label>
+                                    <input
+                                        type="date"
+                                        className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newRecurring.startDate || ''}
+                                        onChange={e => setNewRecurring({...newRecurring, startDate: e.target.value || undefined})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-1">종료일 (선택)</label>
+                                    <input
+                                        type="date"
+                                        className="w-full border border-slate-200 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={newRecurring.endDate || ''}
+                                        onChange={e => setNewRecurring({...newRecurring, endDate: e.target.value || undefined})}
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs text-slate-400 -mt-2">종료일이 지나면 일괄 적용 시 자동 삭제됩니다.</p>
                             <button type="submit" className="w-full bg-purple-600 text-white py-3.5 rounded-xl font-semibold hover:bg-purple-700 transition mt-2 shadow-lg shadow-purple-600/20">
-                                Save Fixed Cost
+                                {editingRecurring ? 'Update Fixed Cost' : 'Save Fixed Cost'}
                             </button>
                         </form>
                     </div>

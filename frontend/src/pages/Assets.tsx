@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { getAssets, createAsset, updateAsset, getNetWorth, getCards, createCard, deleteCard } from '../api/services';
+import { getAssets, createAsset, updateAsset, deleteAsset, setDefaultAsset, getNetWorth, getCards, createCard, deleteCard } from '../api/services';
 import type { AssetResponse, AssetType, NetWorthResponse, AssetRequest, Card, CardRequest, CardType } from '../types';
-import { formatCurrency, cn } from '../utils';
-import { Plus, Edit2, Building2, TrendingUp, DollarSign, X, CreditCard, Trash2 } from 'lucide-react';
+import { formatCurrency, formatNumber, evaluateExpr, formatExpr, cn } from '../utils';
+import { Plus, Edit2, Building2, TrendingUp, DollarSign, X, CreditCard, Trash2, Star } from 'lucide-react';
 
 const AssetsPage = () => {
     const [activeTab, setActiveTab] = useState<'ASSETS' | 'CARDS'>('ASSETS');
@@ -19,6 +19,8 @@ const AssetsPage = () => {
         balance: 0,
         purchasePrice: 0
     });
+    const [balanceExpr, setBalanceExpr] = useState('');
+    const [purchasePriceExpr, setPurchasePriceExpr] = useState('');
 
     // Card Form State
     const [isCardFormOpen, setIsCardFormOpen] = useState(false);
@@ -57,6 +59,8 @@ const AssetsPage = () => {
             setIsAssetFormOpen(false);
             setEditingAsset(null);
             setAssetFormData({ type: 'CASH', name: '', balance: 0, purchasePrice: 0 });
+            setBalanceExpr('');
+            setPurchasePriceExpr('');
             fetchData();
         } catch (error) {
             alert('Failed to save asset');
@@ -85,6 +89,25 @@ const AssetsPage = () => {
         }
     };
 
+    const handleDeleteAsset = async (id: number) => {
+        if (!confirm('Are you sure you want to delete this asset?')) return;
+        try {
+            await deleteAsset(id);
+            fetchData();
+        } catch (error) {
+            alert('기본 자산은 삭제할 수 없습니다.');
+        }
+    };
+
+    const handleSetDefault = async (id: number) => {
+        try {
+            await setDefaultAsset(id);
+            fetchData();
+        } catch (error) {
+            alert('Failed to set default asset');
+        }
+    };
+
     const openAssetEdit = (asset: AssetResponse) => {
         setEditingAsset(asset);
         setAssetFormData({
@@ -93,6 +116,8 @@ const AssetsPage = () => {
             balance: asset.balance,
             purchasePrice: asset.purchasePrice || 0
         });
+        setBalanceExpr(formatNumber(asset.balance));
+        setPurchasePriceExpr(asset.purchasePrice ? formatNumber(asset.purchasePrice) : '');
         setIsAssetFormOpen(true);
     };
 
@@ -164,6 +189,8 @@ const AssetsPage = () => {
                                 onClick={() => {
                                     setEditingAsset(null);
                                     setAssetFormData({ type: 'CASH', name: '', balance: 0, purchasePrice: 0 });
+                                    setBalanceExpr('');
+                                    setPurchasePriceExpr('');
                                     setIsAssetFormOpen(true);
                                 }}
                                 className="text-blue-600 hover:text-blue-700 text-sm font-semibold flex items-center"
@@ -196,7 +223,17 @@ const AssetsPage = () => {
                                                     {asset.type}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 font-semibold text-slate-800">{asset.name}</td>
+                                            <td className="px-6 py-4 font-semibold text-slate-800">
+                                                <span className="flex items-center gap-2">
+                                                    {asset.name}
+                                                    {asset.isDefault && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-yellow-100 text-yellow-700 border border-yellow-200">
+                                                            <Star size={10} className="fill-yellow-500 text-yellow-500" />
+                                                            기본
+                                                        </span>
+                                                    )}
+                                                </span>
+                                            </td>
                                             <td className="px-6 py-4 text-right font-bold text-slate-900 text-base">
                                                 {formatCurrency(asset.balance)}
                                             </td>
@@ -211,12 +248,31 @@ const AssetsPage = () => {
                                                 ) : <span className="text-slate-300">-</span>}
                                             </td>
                                             <td className="px-6 py-4 text-center">
-                                                <button 
-                                                    onClick={() => openAssetEdit(asset)}
-                                                    className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
+                                                <div className="flex items-center justify-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {!asset.isDefault && (
+                                                        <button
+                                                            onClick={() => handleSetDefault(asset.id)}
+                                                            className="p-2 hover:bg-yellow-50 rounded-lg text-slate-400 hover:text-yellow-600 transition-colors"
+                                                            title="기본 자산으로 설정"
+                                                        >
+                                                            <Star size={16} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => openAssetEdit(asset)}
+                                                        className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
+                                                    >
+                                                        <Edit2 size={16} />
+                                                    </button>
+                                                    {!asset.isDefault && (
+                                                        <button
+                                                            onClick={() => handleDeleteAsset(asset.id)}
+                                                            className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -314,23 +370,43 @@ const AssetsPage = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Balance</label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
                                     required
+                                    placeholder="예: 1,000,000"
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                    value={assetFormData.balance}
-                                    onChange={e => setAssetFormData({...assetFormData, balance: Number(e.target.value)})}
+                                    value={balanceExpr}
+                                    onChange={e => {
+                                        const formatted = formatExpr(e.target.value);
+                                        setBalanceExpr(formatted);
+                                        const val = evaluateExpr(formatted);
+                                        if (val !== null) setAssetFormData({...assetFormData, balance: val});
+                                    }}
                                 />
+                                {/[+\-*/]/.test(balanceExpr.replace(/^-/, '')) && evaluateExpr(balanceExpr) !== null && (
+                                    <p className="text-xs text-blue-600 font-medium mt-1">= {formatCurrency(evaluateExpr(balanceExpr)!)}</p>
+                                )}
                             </div>
                             {assetFormData.type === 'STOCK' && (
                                 <div>
                                     <label className="block text-sm font-semibold text-slate-700 mb-2">Purchase Price</label>
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="예: 500,000"
                                         className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                                        value={assetFormData.purchasePrice}
-                                        onChange={e => setAssetFormData({...assetFormData, purchasePrice: Number(e.target.value)})}
+                                        value={purchasePriceExpr}
+                                        onChange={e => {
+                                            const formatted = formatExpr(e.target.value);
+                                            setPurchasePriceExpr(formatted);
+                                            const val = evaluateExpr(formatted);
+                                            if (val !== null) setAssetFormData({...assetFormData, purchasePrice: val});
+                                        }}
                                     />
+                                    {/[+\-*/]/.test(purchasePriceExpr.replace(/^-/, '')) && evaluateExpr(purchasePriceExpr) !== null && (
+                                        <p className="text-xs text-blue-600 font-medium mt-1">= {formatCurrency(evaluateExpr(purchasePriceExpr)!)}</p>
+                                    )}
                                 </div>
                             )}
                             <button type="submit" className="w-full bg-blue-600 text-white py-3.5 rounded-xl font-semibold hover:bg-blue-700 transition mt-2">

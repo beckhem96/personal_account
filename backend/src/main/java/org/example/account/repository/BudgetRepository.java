@@ -12,4 +12,6 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
 
     @org.springframework.data.jpa.repository.Query("SELECT b FROM Budget b WHERE (b.year * 12 + b.month) >= :startTotalMonths AND (b.year * 12 + b.month) <= :endTotalMonths")
     List<Budget> findBudgetsBetween(Integer startTotalMonths, Integer endTotalMonths);
+
+    boolean existsByCategoryId(Long categoryId);
 }

@@ -23,7 +23,7 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
 * **스타일링:** Tailwind CSS
 * **HTTP 클라이언트:** Axios
 * **구조:**
-    * `pages`: Dashboard, Budget, Assets, Tax
+    * `pages`: Dashboard, Budget, Assets, Tax, Investment
     * `components`: 재사용 가능한 UI 컴포넌트
 
 ## 3. 데이터베이스 스키마
@@ -101,6 +101,30 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
     * `TransactionController.java`
     * `frontend/src/api/services.ts`
     * `frontend/src/pages/Budget.tsx`
+
+### 4.4. ETF 투자 시뮬레이션 (신규)
+* **기능:** 미국 주요 ETF(QQQ, VOO, SCHD, JEPI, JEPQ)의 적립식 투자 수익률 시뮬레이션
+* **주요 특징:**
+    * 종목 선택: 체크박스로 여러 종목 동시 비교
+    * 투자 설정: 기간(1~30년), 월 적립금, 매년 증액 금액
+    * 적립금 상한 설정: 증액해도 최대 월 적립금을 초과하지 않도록 설정
+    * DRIP 설정: 종목별 배당 재투자 ON/OFF 토글
+    * 커스텀 수익률: 기본값 외 직접 CAGR/배당률 입력 가능
+    * 시각화: Recharts LineChart로 자산 추이 비교
+    * 결과 요약: 총 자산, 원금, 수익, 수익률 테이블 및 1등 하이라이트
+    * 종목 설명: 마우스 hover 시 ETF별 상세 설명 Tooltip 표시
+* **ETF 기본 데이터:**
+    | Ticker | Type | CAGR | Dividend |
+    |--------|------|------|----------|
+    | QQQ | 성장주 (Tech) | 17.5% | 0.6% |
+    | VOO | 시장지수 (S&P500) | 12.5% | 1.5% |
+    | SCHD | 배당성장 | 11.5% | 3.5% |
+    | JEPI | 고배당 (Covered Call) | 6.0% | 7.5% |
+    | JEPQ | 고배당 (Tech) | 9.0% | 9.5% |
+* **파일:**
+    * `frontend/src/pages/Investment.tsx` (신규)
+    * `frontend/src/App.tsx` (라우트 추가)
+    * `frontend/src/components/Layout.tsx` (사이드바 메뉴 추가)
 
 ## 5. 다음 작업 (Roadmap)
 

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Entity
 @Getter
@@ -37,21 +38,41 @@ public class RecurringTransaction {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    public RecurringTransaction(String name, BigDecimal amount, Integer dayOfMonth, PaymentMethod paymentMethod, Card card, Category category) {
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asset_id")
+    private Asset asset; // 출금 자산 (이체/저축/투자용)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "to_asset_id")
+    private Asset toAsset; // 입금 자산 (이체/저축/투자용)
+
+    private LocalDate startDate; // 고정비용 시작일 (nullable)
+
+    private LocalDate endDate; // 고정비용 종료일 (nullable)
+
+    public RecurringTransaction(String name, BigDecimal amount, Integer dayOfMonth, PaymentMethod paymentMethod, Card card, Category category, Asset asset, Asset toAsset, LocalDate startDate, LocalDate endDate) {
         this.name = name;
         this.amount = amount;
         this.dayOfMonth = dayOfMonth;
         this.paymentMethod = paymentMethod;
         this.card = card;
         this.category = category;
+        this.asset = asset;
+        this.toAsset = toAsset;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 
-    public void update(String name, BigDecimal amount, Integer dayOfMonth, PaymentMethod paymentMethod, Card card, Category category) {
+    public void update(String name, BigDecimal amount, Integer dayOfMonth, PaymentMethod paymentMethod, Card card, Category category, Asset asset, Asset toAsset, LocalDate startDate, LocalDate endDate) {
         this.name = name;
         this.amount = amount;
         this.dayOfMonth = dayOfMonth;
         this.paymentMethod = paymentMethod;
         this.card = card;
         this.category = category;
+        this.asset = asset;
+        this.toAsset = toAsset;
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 }

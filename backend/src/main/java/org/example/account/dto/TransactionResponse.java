@@ -13,10 +13,14 @@ public record TransactionResponse(
         String memo,
         PaymentMethod paymentMethod,
         String categoryName,
-        Long categoryId, // Added for edit form
+        Long categoryId,
         boolean isConfirmed,
         String cardName,
-        Long cardId // Added for edit form
+        Long cardId,
+        Long assetId,
+        String assetName,
+        Long toAssetId,
+        String toAssetName
 ) {
     public static TransactionResponse from(Transaction transaction) {
         return new TransactionResponse(
@@ -29,7 +33,11 @@ public record TransactionResponse(
                 transaction.getCategory().getId(),
                 transaction.isConfirmed(),
                 transaction.getCard() != null ? transaction.getCard().getName() : null,
-                transaction.getCard() != null ? transaction.getCard().getId() : null
+                transaction.getCard() != null ? transaction.getCard().getId() : null,
+                transaction.getAsset() != null ? transaction.getAsset().getId() : null,
+                transaction.getAsset() != null ? transaction.getAsset().getName() : null,
+                transaction.getToAsset() != null ? transaction.getToAsset().getId() : null,
+                transaction.getToAsset() != null ? transaction.getToAsset().getName() : null
         );
     }
 }

@@ -1,5 +1,5 @@
 import api from './axios';
-import type { 
+import type {
     CategoryResponse, CategoryRequest,
     BudgetResponse, BudgetRequest,
     TransactionResponse, TransactionRequest,
@@ -8,6 +8,7 @@ import type {
     YearEndSettlementRequest, YearEndSettlementResponse,
     Card, CardRequest,
     RecurringTransaction, RecurringTransactionRequest,
+    ApplyRecurringResponse,
     PaymentMethod
 } from '../types';
 
@@ -20,6 +21,15 @@ export const getCategories = async () => {
 export const createCategory = async (data: CategoryRequest) => {
     const response = await api.post<CategoryResponse>('/categories', data);
     return response.data;
+};
+
+export const updateCategory = async (id: number, data: CategoryRequest) => {
+    const response = await api.put<CategoryResponse>(`/categories/${id}`, data);
+    return response.data;
+};
+
+export const deleteCategory = async (id: number) => {
+    await api.delete(`/categories/${id}`);
 };
 
 // Cards
@@ -48,8 +58,23 @@ export const createRecurringTransaction = async (data: RecurringTransactionReque
     return response.data;
 };
 
+export const updateRecurringTransaction = async (id: number, data: RecurringTransactionRequest) => {
+    const response = await api.put<RecurringTransaction>(`/recurring/${id}`, data);
+    return response.data;
+};
+
 export const deleteRecurringTransaction = async (id: number) => {
     await api.delete(`/recurring/${id}`);
+};
+
+export const applyRecurringTransactions = async () => {
+    const response = await api.post<ApplyRecurringResponse>('/recurring/apply');
+    return response.data;
+};
+
+export const applySingleRecurringTransaction = async (id: number) => {
+    const response = await api.post<ApplyRecurringResponse>(`/recurring/${id}/apply`);
+    return response.data;
 };
 
 // Budgets
@@ -116,6 +141,15 @@ export const createAsset = async (data: AssetRequest) => {
 
 export const updateAsset = async (id: number, data: AssetRequest) => {
     const response = await api.put<AssetResponse>(`/assets/${id}`, data);
+    return response.data;
+};
+
+export const deleteAsset = async (id: number) => {
+    await api.delete(`/assets/${id}`);
+};
+
+export const setDefaultAsset = async (id: number) => {
+    const response = await api.patch<AssetResponse>(`/assets/${id}/set-default`);
     return response.data;
 };
 
