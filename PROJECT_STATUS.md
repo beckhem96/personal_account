@@ -70,6 +70,15 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
 * `name`: 카테고리명
 * `type`: Enum (INCOME, EXPENSE, TRANSFER)
 
+### MyStock (미국 주식)
+* `id`: PK
+* `ticker`: 티커 심볼 (UNIQUE)
+* `companyName`: 회사명
+* `purchasePrice`: 평단가
+* `quantity`: 보유 수량
+* `currentPrice`: 현재가 (Nullable)
+* `lastSyncedAt`: 마지막 동기화 시각 (Nullable)
+
 ## 4. 구현 완료된 기능
 
 ### 4.1. 기본 기능
@@ -126,22 +135,46 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
     * `frontend/src/App.tsx` (라우트 추가)
     * `frontend/src/components/Layout.tsx` (사이드바 메뉴 추가)
 
+### 4.5. 미국 주식 포트폴리오 (신규)
+* **기능:** 보유 미국 주식 관리, 실시간 시세 동기화, AI 분석
+* **주요 특징:**
+    * 종목 검색 (Alpha Vantage Symbol Search API)
+    * 보유 종목 CRUD (티커, 회사명, 평단가, 수량)
+    * 개별/전체 가격 동기화 (Alpha Vantage Global Quote)
+    * AI 종목 분석 (기술적 지표 RSI/SMA/BBANDS + 뉴스 감성 분석 → Gemini 리포트)
+    * 포트폴리오 요약 (총 투자금, 총 평가금, 총 수익률)
+* **파일:**
+    * `domain/MyStock.java`, `repository/MyStockRepository.java`
+    * `client/AlphaVantageClient.java`, `client/GeminiClient.java`
+    * `service/MyStockService.java`, `service/StockAnalysisService.java`
+    * `controller/MyStockController.java`
+    * `frontend/src/pages/StockAnalysis.tsx`
+
+### 4.6. 오늘의 시장 전망 (신규)
+* **기능:** CNBC RSS 뉴스 4개 피드 수집 → Gemini AI 시장 전망 리포트 생성
+* **주요 특징:**
+    * CNBC RSS 피드: Top News, World News, Finance, Technology
+    * 피드당 최대 60건 수집, XML 파싱 (JDK DocumentBuilderFactory)
+    * Gemini AI 프롬프트: 주요 이슈 요약, 섹터별 전망, 시장 심리, 투자 전략, 리스크 요인, 강력 매수/매도 종목
+    * Caffeine Cache: 하루 1회만 생성 (24h TTL, 날짜 기반 캐시 키), 이후 즉시 반환
+    * UI: "오늘의 전망은?" 버튼 → 마크다운 리포트 + 참고 기사 접기/펼치기
+* **파일:**
+    * `config/CacheConfig.java` (신규)
+    * `client/CnbcRssClient.java` (신규)
+    * `dto/RssArticle.java`, `dto/MarketOutlookResponse.java` (신규)
+    * `service/MarketOutlookService.java` (신규)
+    * `controller/MyStockController.java` (엔드포인트 추가)
+    * `frontend/src/pages/StockAnalysis.tsx` (UI 추가)
+
 ## 5. 다음 작업 (Roadmap)
 
-### 5.1. 고정 비용 월별 자동 생성
-* **목표:** 매월 초에 등록된 고정 비용들의 Transaction을 자동으로 생성
-* **구현 방안:**
-    * Spring Scheduler를 사용하여 매월 1일에 실행
-    * 모든 RecurringTransaction을 조회하여 해당 월의 Transaction 생성
-    * 중복 생성 방지 로직 필요
-
-### 5.2. 소비/예산 → 연말정산 연동
+### 5.1. 소비/예산 → 연말정산 연동
 * **목표:** 실제 거래 데이터를 활용한 연말정산 자동 시뮬레이션
 * **구현 방안:**
     * Transaction을 연도/결제수단별로 집계 (신용카드, 체크카드, 현금영수증)
     * 집계 데이터를 Tax 계산 서비스에 자동 연동
 
-### 5.3. 현금 흐름 → 자산 연동
+### 5.2. 현금 흐름 → 자산 연동
 * **목표:** Transaction 생성 시 Asset 잔액 자동 업데이트
 * **구현 방안:**
     * Transaction 생성/확정 시 관련 Asset 잔액 차감

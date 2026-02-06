@@ -9,7 +9,9 @@ import type {
     Card, CardRequest,
     RecurringTransaction, RecurringTransactionRequest,
     ApplyRecurringResponse,
-    PaymentMethod
+    PaymentMethod,
+    MyStock, MyStockRequest, SymbolSearchResult, StockAnalysis,
+    MarketOutlookResponse
 } from '../types';
 
 // Categories
@@ -166,5 +168,50 @@ export const calculateStockTax = async (data: TaxStockRequest) => {
 
 export const simulateYearEnd = async (data: YearEndSettlementRequest) => {
     const response = await api.post<YearEndSettlementResponse>('/tax/year-end', data);
+    return response.data;
+};
+
+// My Stocks (미국 주식)
+export const getMyStocks = async () => {
+    const response = await api.get<MyStock[]>('/stocks');
+    return response.data;
+};
+
+export const addMyStock = async (data: MyStockRequest) => {
+    const response = await api.post<MyStock>('/stocks', data);
+    return response.data;
+};
+
+export const updateMyStock = async (id: number, data: MyStockRequest) => {
+    const response = await api.put<MyStock>(`/stocks/${id}`, data);
+    return response.data;
+};
+
+export const deleteMyStock = async (id: number) => {
+    await api.delete(`/stocks/${id}`);
+};
+
+export const searchSymbol = async (keywords: string) => {
+    const response = await api.get<SymbolSearchResult[]>('/stocks/search', { params: { keywords } });
+    return response.data;
+};
+
+export const syncStockPrice = async (id: number) => {
+    const response = await api.post<MyStock>(`/stocks/${id}/sync`);
+    return response.data;
+};
+
+export const syncAllStockPrices = async () => {
+    const response = await api.post<MyStock[]>('/stocks/sync-all');
+    return response.data;
+};
+
+export const analyzeStock = async (id: number) => {
+    const response = await api.post<StockAnalysis>(`/stocks/${id}/analyze`);
+    return response.data;
+};
+
+export const getMarketOutlook = async () => {
+    const response = await api.get<MarketOutlookResponse>('/stocks/market-outlook');
     return response.data;
 };
