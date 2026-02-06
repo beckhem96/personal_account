@@ -14,3 +14,21 @@ spring:
         format_sql: true
     show-sql: true
     database-platform: org.hibernate.dialect.MySQL8Dialect
+
+alphavantage:
+  api-key: ${ALPHAVANTAGE_API_KEY:}
+  base-url: https://www.alphavantage.co/query
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  base-url: https://generativelanguage.googleapis.com/v1beta
+  target-model: gemini-3-pro-preview
+
+cnbc:
+  rss:
+    address-pre: https://www.cnbc.com/id/
+    address-post: /device/rss/rss.html
+    top-news: 100003114
+    world-news: 100727362
+    finance: 10000664
+    technology: 19854910

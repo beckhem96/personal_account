@@ -12,6 +12,7 @@ import Tax from './pages/Tax';
 import Settings from './pages/Settings';
 
 import Investment from './pages/Investment';
+import StockAnalysis from './pages/StockAnalysis';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/assets" element={<Assets />} />
           <Route path="/tax" element={<Tax />} />
           <Route path="/investment" element={<Investment />} />
+          <Route path="/stocks" element={<StockAnalysis />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>

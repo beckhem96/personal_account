@@ -162,6 +162,63 @@ export interface YearEndSettlementResponse {
     guideMessage: string;
 }
 
+// MyStock (미국 주식)
+export interface MyStock {
+    id: number;
+    ticker: string;
+    companyName: string;
+    purchasePrice: number;
+    quantity: number;
+    currentPrice?: number;
+    valuation?: number;
+    returnRate?: number;
+    lastSyncedAt?: string;
+}
+
+export interface MyStockRequest {
+    ticker: string;
+    companyName: string;
+    purchasePrice: number;
+    quantity: number;
+}
+
+export interface SymbolSearchResult {
+    symbol: string;
+    name: string;
+    type: string;
+    region: string;
+    currency: string;
+}
+
+export interface StockNewsItem {
+    title: string;
+    url: string;
+    summary: string;
+    sentiment: string;
+}
+
+export interface StockAnalysis {
+    ticker: string;
+    report: string;
+    indicators: Record<string, string>;
+    news: StockNewsItem[];
+}
+
+// Market Outlook (시장 전망)
+export interface RssArticle {
+    title: string;
+    description: string;
+    link: string;
+    pubDate: string;
+    category: string;
+}
+
+export interface MarketOutlookResponse {
+    report: string;
+    generatedAt: string;
+    sources: RssArticle[];
+}
+
 // Aliases for Response types to match conventions
 export type CategoryResponse = Category;
 export type BudgetResponse = Budget;
