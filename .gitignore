@@ -21,9 +21,6 @@ frontend/dist/
 frontend/.env.local
 frontend/.env.*.local
 
-# key
-key.txt
-
 # dump
 db_dump
 
