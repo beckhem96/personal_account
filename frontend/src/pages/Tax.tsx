@@ -153,7 +153,7 @@ const StockTaxCalculator = () => {
 };
 
 const YearEndSettlementSimulator = () => {
-    const [inputs, setInputs] = useState({ salary: '', card: '', cash: '' });
+    const [inputs, setInputs] = useState({ salary: '', card: '', cash: '', market: '', transport: '' });
     const [result, setResult] = useState<YearEndSettlementResponse | null>(null);
 
     const handleSimulate = async (e: React.FormEvent) => {
@@ -162,7 +162,9 @@ const YearEndSettlementSimulator = () => {
             const data = await simulateYearEnd({
                 totalSalary: Number(inputs.salary),
                 creditCardAmount: Number(inputs.card),
-                debitCashAmount: Number(inputs.cash)
+                debitCashAmount: Number(inputs.cash),
+                traditionalMarketAmount: Number(inputs.market) || 0,
+                publicTransportAmount: Number(inputs.transport) || 0
             });
             setResult(data);
         } catch (error) {
@@ -177,25 +179,25 @@ const YearEndSettlementSimulator = () => {
                      <div className="p-3 bg-green-50 text-green-600 rounded-xl">
                         <DollarSign size={24} />
                      </div>
-                     <h2 className="text-xl font-bold text-slate-800">Deduction Simulator</h2>
+                     <h2 className="text-xl font-bold text-slate-800">연말정산 시뮬레이터</h2>
                 </div>
-                
-                <form onSubmit={handleSimulate} className="space-y-5">
+
+                <form onSubmit={handleSimulate} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Annual Gross Salary</label>
-                        <input 
-                            type="number" 
+                        <label className="block text-sm font-bold text-slate-700 mb-2">총급여 (연봉)</label>
+                        <input
+                            type="number"
                             required
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                             value={inputs.salary}
                             onChange={e => setInputs({...inputs, salary: e.target.value})}
-                            placeholder="e.g. 50000000"
+                            placeholder="예: 50000000"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Credit Card Spending</label>
-                        <input 
-                            type="number" 
+                        <label className="block text-sm font-bold text-slate-700 mb-2">신용카드 사용액 (15%)</label>
+                        <input
+                            type="number"
                             required
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                             value={inputs.card}
@@ -204,9 +206,9 @@ const YearEndSettlementSimulator = () => {
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-2">Debit/Cash Receipt Spending</label>
-                        <input 
-                            type="number" 
+                        <label className="block text-sm font-bold text-slate-700 mb-2">체크카드/현금영수증 (30%)</label>
+                        <input
+                            type="number"
                             required
                             className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
                             value={inputs.cash}
@@ -214,37 +216,80 @@ const YearEndSettlementSimulator = () => {
                             placeholder="0"
                         />
                     </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">전통시장 사용액 (40%)</label>
+                        <input
+                            type="number"
+                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                            value={inputs.market}
+                            onChange={e => setInputs({...inputs, market: e.target.value})}
+                            placeholder="0 (선택)"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">대중교통 사용액 (40%)</label>
+                        <input
+                            type="number"
+                            className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all"
+                            value={inputs.transport}
+                            onChange={e => setInputs({...inputs, transport: e.target.value})}
+                            placeholder="0 (선택)"
+                        />
+                    </div>
                     <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 shadow-lg shadow-slate-900/20 transition-all mt-4">
-                        Analyze Spending
+                        공제액 계산
                     </button>
                 </form>
             </div>
 
             {result ? (
-                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-8">
-                    <h2 className="text-xl font-bold text-slate-800">Analysis Result</h2>
-                    
-                    <div className="space-y-4">
-                        <div className="bg-slate-50 p-6 rounded-2xl">
-                            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wide mb-2">Minimum Usage Threshold (25%)</h3>
-                            <p className="text-3xl font-bold text-slate-900">{formatCurrency(result.minUsageThreshold)}</p>
-                            <p className="text-xs text-slate-400 mt-2">Deductions apply only to amounts exceeding this threshold.</p>
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+                    <h2 className="text-xl font-bold text-slate-800">계산 결과</h2>
+
+                    <div className="space-y-3">
+                        <div className="bg-slate-50 p-4 rounded-xl">
+                            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1">최저 사용금액 (25%)</h3>
+                            <p className="text-2xl font-bold text-slate-900">{formatCurrency(result.minUsageThreshold)}</p>
                         </div>
 
-                        <div className="bg-green-50 p-6 rounded-2xl border border-green-100">
-                            <h3 className="text-sm font-bold text-green-700 uppercase tracking-wide mb-2">Estimated Deduction</h3>
-                            <p className="text-3xl font-bold text-green-800">{formatCurrency(result.estimatedDeduction)}</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                                <p className="text-xs text-blue-600 font-medium">신용카드 공제</p>
+                                <p className="text-lg font-bold text-blue-800">{formatCurrency(result.creditDeduction)}</p>
+                            </div>
+                            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                <p className="text-xs text-indigo-600 font-medium">체크/현금 공제</p>
+                                <p className="text-lg font-bold text-indigo-800">{formatCurrency(result.debitDeduction)}</p>
+                            </div>
+                            <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                                <p className="text-xs text-orange-600 font-medium">전통시장 공제</p>
+                                <p className="text-lg font-bold text-orange-800">{formatCurrency(result.marketDeduction)}</p>
+                            </div>
+                            <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                                <p className="text-xs text-purple-600 font-medium">대중교통 공제</p>
+                                <p className="text-lg font-bold text-purple-800">{formatCurrency(result.transportDeduction)}</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-100 p-4 rounded-xl text-center">
+                            <p className="text-xs text-slate-500">일반 공제한도</p>
+                            <p className="text-lg font-bold text-slate-700">{formatCurrency(result.generalLimit)}</p>
+                        </div>
+
+                        <div className="bg-green-600 p-6 rounded-2xl text-white shadow-lg shadow-green-600/30">
+                            <p className="text-green-100 font-medium mb-1">최종 공제액</p>
+                            <p className="text-3xl font-bold tracking-tight">{formatCurrency(result.totalDeduction)}</p>
                         </div>
                     </div>
 
-                    <div className="bg-yellow-50 p-6 rounded-2xl border border-yellow-100 flex gap-4">
+                    <div className="bg-yellow-50 p-5 rounded-2xl border border-yellow-100 flex gap-4">
                         <div className="flex-shrink-0">
                             <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600">
                                 <Info size={20} />
                             </div>
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-800 mb-2">Smart Guide</h3>
+                            <h3 className="font-bold text-slate-800 mb-1">절세 가이드</h3>
                             <p className="text-sm text-slate-700 leading-relaxed">
                                 {result.guideMessage}
                             </p>
@@ -254,7 +299,7 @@ const YearEndSettlementSimulator = () => {
             ) : (
                 <div className="hidden lg:flex flex-col items-center justify-center h-full bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center text-slate-400">
                     <CheckCircle2 size={48} className="mb-4 opacity-50"/>
-                    <p className="font-medium">Enter your salary and spending details to simulate your tax deduction.</p>
+                    <p className="font-medium">급여와 사용액을 입력하면 예상 공제액을 계산합니다.</p>
                 </div>
             )}
         </div>

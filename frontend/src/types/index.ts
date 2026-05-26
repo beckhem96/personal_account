@@ -129,10 +129,23 @@ export interface YearEndSettlementRequest {
     totalSalary: number;
     creditCardAmount: number;
     debitCashAmount: number;
+    traditionalMarketAmount: number;
+    publicTransportAmount: number;
 }
 
 export interface YearEndSettlementResponse {
     minUsageThreshold: number;
-    estimatedDeduction: number;
+    creditDeduction: number;
+    debitDeduction: number;
+    marketDeduction: number;
+    transportDeduction: number;
+    generalLimit: number;
+    totalDeduction: number;
     guideMessage: string;
 }
+
+// Aliases for API responses (same as entity types)
+export type CategoryResponse = Category;
+export type BudgetResponse = Budget;
+export type TransactionResponse = Transaction;
+export type AssetResponse = Asset;

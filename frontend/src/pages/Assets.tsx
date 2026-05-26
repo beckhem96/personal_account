@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getAssets, createAsset, updateAsset, getNetWorth, getCards, createCard, deleteCard } from '../api/services';
 import type { AssetResponse, AssetType, NetWorthResponse, AssetRequest, Card, CardRequest, CardType } from '../types';
 import { formatCurrency, cn } from '../utils';
-import { Plus, Edit2, Wallet, Building2, TrendingUp, DollarSign, X, CreditCard, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Building2, TrendingUp, DollarSign, X, CreditCard, Trash2 } from 'lucide-react';
 
 const AssetsPage = () => {
     const [activeTab, setActiveTab] = useState<'ASSETS' | 'CARDS'>('ASSETS');
@@ -201,7 +201,7 @@ const AssetsPage = () => {
                                                 {formatCurrency(asset.balance)}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                {asset.type === 'STOCK' && asset.returnRate !== null ? (
+                                                {asset.type === 'STOCK' && asset.returnRate != null ? (
                                                     <span className={cn(
                                                         "font-medium",
                                                         asset.returnRate >= 0 ? "text-red-500" : "text-blue-500"
