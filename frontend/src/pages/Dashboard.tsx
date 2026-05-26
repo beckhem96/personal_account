@@ -127,8 +127,8 @@ const Dashboard = () => {
                                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} strokeWidth={0} />
                                     ))}
                                 </Pie>
-                                <Tooltip 
-                                    formatter={(value: number | undefined) => formatCurrency(value || 0)}
+                                <Tooltip
+                                    formatter={(value) => formatCurrency(value as number)}
                                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                                 />
                                 <Legend verticalAlign="bottom" height={36}/>
