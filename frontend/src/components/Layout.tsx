@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wallet, CreditCard, Calculator, Menu, X, LogOut, User } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Calculator, Menu, X, LogOut, User, Settings, TrendingUp, BarChart3 } from 'lucide-react';
 import { cn } from '../utils';
 
 interface LayoutProps {
@@ -32,6 +32,9 @@ const Layout = ({ children }: LayoutProps) => {
     { to: '/budget', icon: CreditCard, label: 'Budget & Ledger' },
     { to: '/assets', icon: Wallet, label: 'Assets' },
     { to: '/tax', icon: Calculator, label: 'Tax Simulation' },
+    { to: '/investment', icon: TrendingUp, label: 'Investment Sim' },
+    { to: '/stocks', icon: BarChart3, label: 'US Stocks' },
+    { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);

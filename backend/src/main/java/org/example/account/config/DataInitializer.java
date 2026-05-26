@@ -1,12 +1,16 @@
 package org.example.account.config;
 
 import lombok.RequiredArgsConstructor;
+import org.example.account.domain.Asset;
+import org.example.account.domain.AssetType;
 import org.example.account.domain.Category;
 import org.example.account.domain.TransactionType;
+import org.example.account.repository.AssetRepository;
 import org.example.account.repository.CategoryRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 
@@ -15,6 +19,7 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
+    private final AssetRepository assetRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -34,6 +39,12 @@ public class DataInitializer implements CommandLineRunner {
 
             categoryRepository.saveAll(defaults);
             System.out.println("Initialized default categories.");
+        }
+
+        if (assetRepository.count() == 0) {
+            Asset defaultCash = new Asset(AssetType.CASH, "현금", BigDecimal.ZERO, null, true);
+            assetRepository.save(defaultCash);
+            System.out.println("Initialized default cash asset.");
         }
     }
 }

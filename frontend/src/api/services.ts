@@ -1,5 +1,5 @@
 import api from './axios';
-import type { 
+import type {
     CategoryResponse, CategoryRequest,
     BudgetResponse, BudgetRequest,
     TransactionResponse, TransactionRequest,
@@ -7,7 +7,11 @@ import type {
     TaxStockRequest, TaxStockResponse,
     YearEndSettlementRequest, YearEndSettlementResponse,
     Card, CardRequest,
-    RecurringTransaction, RecurringTransactionRequest
+    RecurringTransaction, RecurringTransactionRequest,
+    ApplyRecurringResponse,
+    PaymentMethod,
+    MyStock, MyStockRequest, SymbolSearchResult, StockAnalysis,
+    MarketOutlookResponse
 } from '../types';
 
 // Categories
@@ -19,6 +23,15 @@ export const getCategories = async () => {
 export const createCategory = async (data: CategoryRequest) => {
     const response = await api.post<CategoryResponse>('/categories', data);
     return response.data;
+};
+
+export const updateCategory = async (id: number, data: CategoryRequest) => {
+    const response = await api.put<CategoryResponse>(`/categories/${id}`, data);
+    return response.data;
+};
+
+export const deleteCategory = async (id: number) => {
+    await api.delete(`/categories/${id}`);
 };
 
 // Cards
@@ -47,13 +60,28 @@ export const createRecurringTransaction = async (data: RecurringTransactionReque
     return response.data;
 };
 
+export const updateRecurringTransaction = async (id: number, data: RecurringTransactionRequest) => {
+    const response = await api.put<RecurringTransaction>(`/recurring/${id}`, data);
+    return response.data;
+};
+
 export const deleteRecurringTransaction = async (id: number) => {
     await api.delete(`/recurring/${id}`);
 };
 
+export const applyRecurringTransactions = async () => {
+    const response = await api.post<ApplyRecurringResponse>('/recurring/apply');
+    return response.data;
+};
+
+export const applySingleRecurringTransaction = async (id: number) => {
+    const response = await api.post<ApplyRecurringResponse>(`/recurring/${id}/apply`);
+    return response.data;
+};
+
 // Budgets
-export const getBudgets = async (year: number, month: number) => {
-    const response = await api.get<BudgetResponse[]>('/budgets', { params: { year, month } });
+export const getBudgets = async (params: { year?: number, month?: number, startDate?: string, endDate?: string }) => {
+    const response = await api.get<BudgetResponse[]>('/budgets', { params });
     return response.data;
 };
 
@@ -63,8 +91,10 @@ export const setBudget = async (data: BudgetRequest) => {
 };
 
 // Transactions
-export const getTransactions = async (startDate: string, endDate: string) => {
-    const response = await api.get<TransactionResponse[]>('/transactions', { params: { startDate, endDate } });
+export const getTransactions = async (startDate: string, endDate: string, paymentMethod?: PaymentMethod) => {
+    const params: any = { startDate, endDate };
+    if (paymentMethod) params.paymentMethod = paymentMethod;
+    const response = await api.get<TransactionResponse[]>('/transactions', { params });
     return response.data;
 };
 
@@ -116,6 +146,15 @@ export const updateAsset = async (id: number, data: AssetRequest) => {
     return response.data;
 };
 
+export const deleteAsset = async (id: number) => {
+    await api.delete(`/assets/${id}`);
+};
+
+export const setDefaultAsset = async (id: number) => {
+    const response = await api.patch<AssetResponse>(`/assets/${id}/set-default`);
+    return response.data;
+};
+
 export const getNetWorth = async () => {
     const response = await api.get<NetWorthResponse>('/assets/net-worth');
     return response.data;
@@ -129,5 +168,50 @@ export const calculateStockTax = async (data: TaxStockRequest) => {
 
 export const simulateYearEnd = async (data: YearEndSettlementRequest) => {
     const response = await api.post<YearEndSettlementResponse>('/tax/year-end', data);
+    return response.data;
+};
+
+// My Stocks (미국 주식)
+export const getMyStocks = async () => {
+    const response = await api.get<MyStock[]>('/stocks');
+    return response.data;
+};
+
+export const addMyStock = async (data: MyStockRequest) => {
+    const response = await api.post<MyStock>('/stocks', data);
+    return response.data;
+};
+
+export const updateMyStock = async (id: number, data: MyStockRequest) => {
+    const response = await api.put<MyStock>(`/stocks/${id}`, data);
+    return response.data;
+};
+
+export const deleteMyStock = async (id: number) => {
+    await api.delete(`/stocks/${id}`);
+};
+
+export const searchSymbol = async (keywords: string) => {
+    const response = await api.get<SymbolSearchResult[]>('/stocks/search', { params: { keywords } });
+    return response.data;
+};
+
+export const syncStockPrice = async (id: number) => {
+    const response = await api.post<MyStock>(`/stocks/${id}/sync`);
+    return response.data;
+};
+
+export const syncAllStockPrices = async () => {
+    const response = await api.post<MyStock[]>('/stocks/sync-all');
+    return response.data;
+};
+
+export const analyzeStock = async (id: number) => {
+    const response = await api.post<StockAnalysis>(`/stocks/${id}/analyze`);
+    return response.data;
+};
+
+export const getMarketOutlook = async () => {
+    const response = await api.get<MarketOutlookResponse>('/stocks/market-outlook');
     return response.data;
 };

@@ -6,7 +6,9 @@ import org.example.account.domain.AssetType;
 import org.example.account.dto.AssetRequest;
 import org.example.account.dto.AssetResponse;
 import org.example.account.dto.NetWorthResponse;
+import org.example.account.domain.Transaction;
 import org.example.account.repository.AssetRepository;
+import org.example.account.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 public class AssetService {
 
     private final AssetRepository assetRepository;
+    private final TransactionRepository transactionRepository;
 
     @Transactional
     public AssetResponse createAsset(AssetRequest request) {
@@ -47,6 +50,39 @@ public class AssetService {
         return assetRepository.findAll().stream()
                 .map(AssetResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public AssetResponse setDefaultAsset(Long id) {
+        Asset newDefault = assetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Asset not found"));
+
+        // 기존 기본 자산 해제
+        assetRepository.findByIsDefaultTrue().ifPresent(current -> current.setDefault(false));
+
+        // 새 기본 자산 설정
+        newDefault.setDefault(true);
+        return AssetResponse.from(newDefault);
+    }
+
+    @Transactional
+    public void deleteAsset(Long id) {
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Asset not found"));
+
+        if (asset.isDefault()) {
+            throw new IllegalStateException("기본 자산은 삭제할 수 없습니다.");
+        }
+
+        // 해당 자산을 참조하는 거래의 FK를 null로 정리
+        for (Transaction tx : transactionRepository.findByAssetId(id)) {
+            tx.associateAsset(null, tx.getToAsset());
+        }
+        for (Transaction tx : transactionRepository.findByToAssetId(id)) {
+            tx.associateAsset(tx.getAsset(), null);
+        }
+
+        assetRepository.delete(asset);
     }
 
     public NetWorthResponse calculateNetWorth() {

@@ -15,6 +15,7 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
 ### 2. 고정 비용 관리
 - **고정 비용 등록:** 월세, 통신비, 구독료 등 매월 고정 지출 관리
 - **자동 소비 추가:** 고정 비용 등록 시 해당 월의 거래 내역에 자동 추가
+- **월별 자동 생성:** 매월 1일 자정에 스케줄러가 등록된 고정 비용의 거래를 자동 생성 (앱 재시작 시에도 미생성 거래 자동 보정)
 - **결제일 관리:** 매월 결제일(dayOfMonth) 설정
 
 ### 3. 자산 관리
@@ -28,6 +29,21 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
 - **절세 가이드:** "남은 기간 체크카드를 더 사용하세요" 등 추천
 - **주식 양도소득세:** 매도 차익에 대한 세금 계산
 
+### 5. 미국 주식 포트폴리오
+- **종목 관리:** 티커 검색 → 보유 종목 추가/수정/삭제
+- **실시간 시세:** Alpha Vantage API 연동, 개별/전체 가격 동기화
+- **AI 종목 분석:** Gemini AI 기반 기술적 지표 + 뉴스 분석 리포트
+- **오늘의 전망은?:** CNBC RSS 4개 피드(Top News, World, Finance, Tech) 수집 → Gemini AI 시장 전망 리포트 생성
+- **일일 캐시:** Caffeine Cache로 하루 1회만 생성, 이후 캐시 반환
+
+### 6. ETF 투자 시뮬레이션
+- **종목 비교:** QQQ, VOO, SCHD, JEPI, JEPQ 5종목 동시 비교
+- **적립식 투자:** 월 적립금, 매년 증액, 투자 기간 설정
+- **적립금 상한:** 증액 시 최대 월 적립금 제한 설정
+- **DRIP 설정:** 종목별 배당 재투자 ON/OFF
+- **커스텀 수익률:** CAGR, 배당률 직접 입력 모드
+- **시각화:** LineChart로 자산 추이 비교, 결과 요약 테이블
+
 ## 기술 스택
 
 ### 백엔드
@@ -35,6 +51,8 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
 - **프레임워크:** Spring Boot 3.x
 - **데이터베이스:** MySQL 8.0 (Docker)
 - **ORM:** Spring Data JPA (Hibernate)
+- **캐시:** Caffeine (Spring Cache)
+- **외부 API:** Alpha Vantage (주식 시세/지표), Gemini AI (분석 리포트), CNBC RSS (뉴스 피드)
 - **빌드 도구:** Gradle
 
 ### 프론트엔드
@@ -42,6 +60,7 @@ PC 환경에 최적화된 **개인 자산 관리 및 세무 보조 웹 애플리
 - **언어:** TypeScript
 - **스타일링:** Tailwind CSS
 - **HTTP 클라이언트:** Axios
+- **마크다운 렌더링:** react-markdown
 
 ## 프로젝트 구조
 
@@ -57,7 +76,7 @@ personal_account/
 │   └── ...
 ├── frontend/                # React 애플리케이션
 │   ├── src/
-│   │   ├── pages/           # Dashboard, Budget, Assets, Tax
+│   │   ├── pages/           # Dashboard, Budget, Assets, Tax, Investment
 │   │   ├── components/      # 재사용 UI 컴포넌트
 │   │   ├── api/             # API 서비스
 │   │   └── types/           # TypeScript 타입 정의
@@ -112,13 +131,29 @@ UI: `http://localhost:5173`
 | POST | `/api/recurring` | 생성 (자동으로 소비에 추가) |
 | DELETE | `/api/recurring/{id}` | 삭제 |
 
+### 미국 주식 (Stocks)
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/api/stocks` | 보유 종목 조회 |
+| POST | `/api/stocks` | 종목 추가 |
+| PUT | `/api/stocks/{id}` | 종목 수정 |
+| DELETE | `/api/stocks/{id}` | 종목 삭제 |
+| GET | `/api/stocks/search?keywords=` | 티커/회사명 검색 |
+| POST | `/api/stocks/{id}/sync` | 개별 가격 동기화 |
+| POST | `/api/stocks/sync-all` | 전체 가격 동기화 |
+| POST | `/api/stocks/{id}/analyze` | AI 종목 분석 |
+| GET | `/api/stocks/market-outlook` | 오늘의 시장 전망 (CNBC + Gemini) |
+
 ## 로드맵
 
 - [x] 예산 관리 기본 기능
 - [x] 거래 내역 기록 및 조회
 - [x] 고정 비용 → 소비 자동 추가
 - [x] 카드별/기간별 거래 필터링
-- [ ] 고정 비용 월별 자동 생성 (스케줄러)
+- [x] 고정 비용 월별 자동 생성 (스케줄러)
+- [x] ETF 투자 시뮬레이션 (적립금 상한 설정 포함)
+- [x] 미국 주식 포트폴리오 관리 (Alpha Vantage + Gemini AI)
+- [x] 오늘의 시장 전망 (CNBC RSS + Gemini AI, Caffeine 캐시)
 - [ ] 소비/예산 → 연말정산 자동 연동
 - [ ] 거래 → 자산 잔액 자동 연동
 

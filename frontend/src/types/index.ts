@@ -35,6 +35,7 @@ export interface Budget {
     month: number;
     amount: number;
     categoryName: string;
+    categoryId: number;
 }
 
 export interface BudgetRequest {
@@ -52,10 +53,14 @@ export interface Transaction {
     memo: string;
     paymentMethod: PaymentMethod;
     categoryName: string;
-    categoryId: number; // Added
+    categoryId: number;
     isConfirmed: boolean;
     cardName?: string;
-    cardId?: number; // Added
+    cardId?: number;
+    assetId?: number;
+    assetName?: string;
+    toAssetId?: number;
+    toAssetName?: string;
 }
 
 export interface TransactionRequest {
@@ -66,6 +71,8 @@ export interface TransactionRequest {
     categoryId: number;
     isConfirmed: boolean;
     cardId?: number;
+    assetId?: number;
+    toAssetId?: number;
 }
 
 // Recurring Transaction
@@ -76,7 +83,15 @@ export interface RecurringTransaction {
     dayOfMonth: number;
     paymentMethod: PaymentMethod;
     categoryName: string;
+    categoryId: number;
     cardName?: string;
+    cardId?: number;
+    assetId?: number;
+    assetName?: string;
+    toAssetId?: number;
+    toAssetName?: string;
+    startDate?: string;
+    endDate?: string;
 }
 
 export interface RecurringTransactionRequest {
@@ -86,6 +101,15 @@ export interface RecurringTransactionRequest {
     paymentMethod: PaymentMethod;
     categoryId: number;
     cardId?: number;
+    assetId?: number;
+    toAssetId?: number;
+    startDate?: string;
+    endDate?: string;
+}
+
+export interface ApplyRecurringResponse {
+    appliedCount: number;
+    deletedCount: number;
 }
 
 // Asset
@@ -96,6 +120,7 @@ export interface Asset {
     balance: number;
     purchasePrice?: number;
     returnRate?: number;
+    isDefault: boolean;
 }
 
 export interface AssetRequest {

@@ -25,4 +25,9 @@ public class Category {
         this.name = name;
         this.type = type;
     }
+
+    public void update(String name, TransactionType type) {
+        this.name = name;
+        this.type = type;
+    }
 }

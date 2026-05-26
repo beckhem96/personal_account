@@ -37,6 +37,18 @@ public class Transaction {
     @JoinColumn(name = "card_id")
     private Card card; // Optional: Only if PaymentMethod is CARD
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_transaction_id")
+    private RecurringTransaction recurringTransaction;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asset_id")
+    private Asset asset; // INCOME: 입금 대상, EXPENSE: 출금 대상, TRANSFER: 출금 대상
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "to_asset_id")
+    private Asset toAsset; // TRANSFER 전용: 입금 대상
+
     @Column(nullable = false)
     private boolean isConfirmed;
 
@@ -59,6 +71,10 @@ public class Transaction {
         this.isConfirmed = true;
     }
 
+    public void associateRecurringTransaction(RecurringTransaction recurringTransaction) {
+        this.recurringTransaction = recurringTransaction;
+    }
+
     public void update(LocalDate date, BigDecimal amount, String memo, PaymentMethod paymentMethod, Category category, Card card) {
         this.date = date;
         this.amount = amount;
@@ -66,5 +82,10 @@ public class Transaction {
         this.paymentMethod = paymentMethod;
         this.category = category;
         this.card = card;
+    }
+
+    public void associateAsset(Asset asset, Asset toAsset) {
+        this.asset = asset;
+        this.toAsset = toAsset;
     }
 }

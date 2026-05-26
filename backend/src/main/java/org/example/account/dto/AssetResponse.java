@@ -12,7 +12,8 @@ public record AssetResponse(
         String name,
         BigDecimal balance,
         BigDecimal purchasePrice,
-        Double returnRate // 수익률 (주식인 경우)
+        Double returnRate, // 수익률 (주식인 경우)
+        boolean isDefault
 ) {
     public static AssetResponse from(Asset asset) {
         Double rate = null;
@@ -30,7 +31,8 @@ public record AssetResponse(
                 asset.getName(),
                 asset.getBalance(),
                 asset.getPurchasePrice(),
-                rate
+                rate,
+                asset.isDefault()
         );
     }
 }

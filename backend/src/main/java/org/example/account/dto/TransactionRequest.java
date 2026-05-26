@@ -12,6 +12,8 @@ public record TransactionRequest(
         PaymentMethod paymentMethod,
         Long categoryId,
         Boolean isConfirmed,
-        Long cardId // Added
+        Long cardId,
+        Long assetId,
+        Long toAssetId // TRANSFER용
 ) {
 }
