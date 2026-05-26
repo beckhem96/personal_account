@@ -174,3 +174,108 @@ export type CategoryResponse = Category;
 export type BudgetResponse = Budget;
 export type TransactionResponse = Transaction;
 export type AssetResponse = Asset;
+
+// Housing
+export type HouseCount = 'SINGLE' | 'TWO' | 'THREE_OR_MORE';
+export type RepaymentType = 'PRINCIPAL_INTEREST' | 'PRINCIPAL_ONLY' | 'BULLET';
+export type LoanProductCode = 'DIDIMDOL' | 'BOGEUMJARI' | 'GENERAL';
+
+export interface AcquisitionCostRequest {
+    salePrice: number;
+    houseCount: HouseCount;
+    isRegulatedArea: boolean;
+    isFirstTime: boolean;
+    exclusiveAreaSqm: number;
+    standardMarketPrice?: number | null;
+    bondDiscountRate?: number | null;
+}
+
+export interface AcquisitionCostResponse {
+    acquisitionTax: number;
+    localEducationTax: number;
+    ruralSpecialTax: number;
+    brokerFee: number;
+    judicialFee: number;
+    stampDuty: number;
+    nationalHousingBondLoss: number;
+    totalCost: number;
+    breakdown: Record<string, number>;
+}
+
+export interface LoanCostRequest {
+    loanAmount: number;
+    includeAppraisalFee: boolean;
+}
+
+export interface LoanCostResponse {
+    mortgageRegistrationCost: number;
+    stampDuty: number;
+    appraisalFee: number;
+    totalCost: number;
+    breakdown: Record<string, number>;
+}
+
+export interface LoanRepaymentRequest {
+    principal: number;
+    annualRatePercent: number;
+    termMonths: number;
+    repaymentType: RepaymentType;
+    gracePeriodMonths: number;
+    productCode?: LoanProductCode | null;
+}
+
+export interface LoanScheduleRow {
+    month: number;
+    payment: number;
+    principal: number;
+    interest: number;
+    remainingBalance: number;
+}
+
+export interface LoanRepaymentResponse {
+    firstMonthPayment: number;
+    lastMonthPayment: number;
+    totalInterest: number;
+    totalPayment: number;
+    schedule: LoanScheduleRow[];
+}
+
+export interface LoanProductInfo {
+    code: LoanProductCode;
+    name: string;
+    description: string;
+    maxLoanAmount: number;
+    referenceRate: number;
+    eligibility: string[];
+}
+
+export interface ApartmentDealDto {
+    apartmentName: string;
+    dealAmount: number;
+    exclusiveArea: number;
+    floor: number;
+    buildYear: number;
+    dealDate: string | null;
+    dong: string;
+    lawdCd: string;
+}
+
+export interface ApartmentDealsResponse {
+    averagePrice: number;
+    averagePricePerSqm: number;
+    totalDeals: number;
+    filteredDeals: number;
+    deals: ApartmentDealDto[];
+}
+
+export interface RegionDistrict {
+    code: string;
+    name: string;
+    parentName: string;
+}
+
+export interface RegionTree {
+    region: 'SEOUL' | 'GYEONGGI' | 'INCHEON';
+    regionLabel: string;
+    districts: RegionDistrict[];
+}

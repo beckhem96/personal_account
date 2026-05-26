@@ -24,6 +24,10 @@ gemini:
   base-url: https://generativelanguage.googleapis.com/v1beta
   target-model: gemini-3-pro-preview
 
+molit:
+  api-key: ${MOLIT_API_KEY:}
+  base-url: https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev
+
 cnbc:
   rss:
     address-pre: https://www.cnbc.com/id/

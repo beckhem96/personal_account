@@ -15,7 +15,7 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager() {
-        CaffeineCacheManager cacheManager = new CaffeineCacheManager("dailyMarketOutlook");
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager("dailyMarketOutlook", "apartmentDeals");
         cacheManager.setCaffeine(Caffeine.newBuilder()
                 .expireAfterWrite(24, TimeUnit.HOURS)
                 .maximumSize(10));

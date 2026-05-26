@@ -11,7 +11,12 @@ import type {
     ApplyRecurringResponse,
     PaymentMethod,
     MyStock, MyStockRequest, SymbolSearchResult, StockAnalysis,
-    MarketOutlookResponse
+    MarketOutlookResponse,
+    AcquisitionCostRequest, AcquisitionCostResponse,
+    LoanCostRequest, LoanCostResponse,
+    LoanRepaymentRequest, LoanRepaymentResponse,
+    LoanProductInfo,
+    ApartmentDealsResponse, RegionTree
 } from '../types';
 
 // Categories
@@ -213,5 +218,42 @@ export const analyzeStock = async (id: number) => {
 
 export const getMarketOutlook = async () => {
     const response = await api.get<MarketOutlookResponse>('/stocks/market-outlook');
+    return response.data;
+};
+
+// Housing
+export const calculateAcquisitionCost = async (data: AcquisitionCostRequest) => {
+    const response = await api.post<AcquisitionCostResponse>('/housing/acquisition-cost', data);
+    return response.data;
+};
+
+export const calculateLoanCost = async (data: LoanCostRequest) => {
+    const response = await api.post<LoanCostResponse>('/housing/loan-cost', data);
+    return response.data;
+};
+
+export const calculateLoanRepayment = async (data: LoanRepaymentRequest) => {
+    const response = await api.post<LoanRepaymentResponse>('/housing/loan-repayment', data);
+    return response.data;
+};
+
+export const getLoanProducts = async () => {
+    const response = await api.get<LoanProductInfo[]>('/housing/loan-products');
+    return response.data;
+};
+
+export const getHousingRegions = async () => {
+    const response = await api.get<RegionTree[]>('/housing/regions');
+    return response.data;
+};
+
+export const getApartmentDeals = async (params: {
+    lawdCd: string;
+    dealYearMonth: string;
+    minPrice?: number;
+    maxPrice?: number;
+    minArea?: number;
+}) => {
+    const response = await api.get<ApartmentDealsResponse>('/housing/apartment-deals', { params });
     return response.data;
 };

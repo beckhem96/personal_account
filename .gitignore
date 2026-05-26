@@ -26,3 +26,7 @@ db_dump
 
 # gemini
 .gemini
+
+# Local env (API keys)
+.env
+.env.local
