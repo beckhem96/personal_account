@@ -2,6 +2,7 @@ package org.example.account.repository;
 
 import org.example.account.domain.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,4 +32,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     List<Transaction> findByToAssetId(Long toAssetId);
 
     boolean existsByCategoryId(Long categoryId);
+
+    @Modifying
+    @Query("UPDATE Transaction t SET t.recurringTransaction = null WHERE t.recurringTransaction.id = :recurringTransactionId")
+    int detachFromRecurringTransaction(@Param("recurringTransactionId") Long recurringTransactionId);
 }

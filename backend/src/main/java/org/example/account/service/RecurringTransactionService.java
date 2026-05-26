@@ -264,6 +264,8 @@ public class RecurringTransactionService {
 
     @Transactional
     public void delete(Long id) {
+        // 과거 Transaction 이력은 보존하고 FK만 풀어준 뒤 삭제
+        transactionRepository.detachFromRecurringTransaction(id);
         repository.deleteById(id);
     }
 }

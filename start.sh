@@ -19,16 +19,25 @@ trap cleanup SIGINT SIGTERM
 echo "=== Personal Account Dashboard ==="
 echo ""
 
+# Load .env if present (API keys, etc.)
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    set -a
+    # shellcheck disable=SC1091
+    . "$PROJECT_ROOT/.env"
+    set +a
+    echo "Loaded environment variables from .env"
+fi
+
 # 1. Start database
 echo "[1/3] Starting database..."
-docker-compose -f "$PROJECT_ROOT/docker-compose.yml" up -d
+docker compose -f "$PROJECT_ROOT/docker-compose.yml" up -d
 echo "Database is running on port 3306."
 echo ""
 
 # 2. Start backend
 echo "[2/3] Starting backend..."
-cd "$PROJECT_ROOT/backend"
-./gradlew bootRun --console=plain &
+cd "$PROJECT_ROOT"
+./gradlew :backend:bootRun --console=plain &
 BACKEND_PID=$!
 sleep 5
 echo "Backend is starting on port 8080. (PID: $BACKEND_PID)"
