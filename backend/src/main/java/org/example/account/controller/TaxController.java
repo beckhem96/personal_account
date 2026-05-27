@@ -7,9 +7,11 @@ import org.example.account.dto.YearEndSettlementRequest;
 import org.example.account.dto.YearEndSettlementResponse;
 import org.example.account.service.TaxService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -27,5 +29,10 @@ public class TaxController {
     @PostMapping("/year-end")
     public ResponseEntity<YearEndSettlementResponse> simulateYearEnd(@RequestBody YearEndSettlementRequest request) {
         return ResponseEntity.ok(taxService.simulateYearEndSettlement(request));
+    }
+
+    @GetMapping("/year-end/auto")
+    public ResponseEntity<YearEndSettlementRequest> autoYearEnd(@RequestParam("year") int year) {
+        return ResponseEntity.ok(taxService.computeYearEndFromTransactions(year));
     }
 }

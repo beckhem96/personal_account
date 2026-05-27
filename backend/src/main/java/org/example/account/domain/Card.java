@@ -21,13 +21,28 @@ public class Card {
     @Column(nullable = false)
     private CardType type;
 
+    @Enumerated(EnumType.STRING)
+    private CardCompany company;
+
     public Card(String name, CardType type) {
         this.name = name;
         this.type = type;
     }
 
+    public Card(String name, CardType type, CardCompany company) {
+        this.name = name;
+        this.type = type;
+        this.company = company;
+    }
+
     public void update(String name, CardType type) {
         this.name = name;
         this.type = type;
+    }
+
+    public void update(String name, CardType type, CardCompany company) {
+        this.name = name;
+        this.type = type;
+        this.company = company;
     }
 }

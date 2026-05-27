@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -36,4 +37,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Modifying
     @Query("UPDATE Transaction t SET t.recurringTransaction = null WHERE t.recurringTransaction.id = :recurringTransactionId")
     int detachFromRecurringTransaction(@Param("recurringTransactionId") Long recurringTransactionId);
+
+    @Query("SELECT t.externalRef FROM Transaction t WHERE t.externalRef IN :refs")
+    List<String> findExistingExternalRefs(@Param("refs") Collection<String> refs);
+
+    @Query("SELECT DISTINCT t FROM Transaction t " +
+            "LEFT JOIN FETCH t.category " +
+            "LEFT JOIN FETCH t.card " +
+            "WHERE t.date BETWEEN :start AND :end AND t.isConfirmed = true")
+    List<Transaction> findConfirmedWithJoinsBetween(@Param("start") LocalDate start, @Param("end") LocalDate end);
 }

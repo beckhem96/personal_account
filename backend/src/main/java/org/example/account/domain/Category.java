@@ -21,13 +21,32 @@ public class Category {
     @Column(nullable = false)
     private TransactionType type;
 
+    @Enumerated(EnumType.STRING)
+    private YearEndCategory yearEndCategory;
+
     public Category(String name, TransactionType type) {
         this.name = name;
         this.type = type;
     }
 
+    public Category(String name, TransactionType type, YearEndCategory yearEndCategory) {
+        this.name = name;
+        this.type = type;
+        this.yearEndCategory = yearEndCategory;
+    }
+
     public void update(String name, TransactionType type) {
         this.name = name;
         this.type = type;
+    }
+
+    public void update(String name, TransactionType type, YearEndCategory yearEndCategory) {
+        this.name = name;
+        this.type = type;
+        this.yearEndCategory = yearEndCategory;
+    }
+
+    public YearEndCategory yearEndCategoryOrNone() {
+        return yearEndCategory == null ? YearEndCategory.NONE : yearEndCategory;
     }
 }

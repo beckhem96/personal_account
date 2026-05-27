@@ -52,6 +52,9 @@ public class Transaction {
     @Column(nullable = false)
     private boolean isConfirmed;
 
+    @Column(name = "external_ref", length = 200)
+    private String externalRef;
+
     public Transaction(LocalDate date, BigDecimal amount, String memo, PaymentMethod paymentMethod, Category category, boolean isConfirmed, Card card) {
         this.date = date;
         this.amount = amount;
@@ -60,6 +63,11 @@ public class Transaction {
         this.category = category;
         this.isConfirmed = isConfirmed;
         this.card = card;
+    }
+
+    public Transaction(LocalDate date, BigDecimal amount, String memo, PaymentMethod paymentMethod, Category category, boolean isConfirmed, Card card, String externalRef) {
+        this(date, amount, memo, paymentMethod, category, isConfirmed, card);
+        this.externalRef = externalRef;
     }
 
     // Constructor for backward compatibility (card is null)

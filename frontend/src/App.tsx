@@ -14,6 +14,7 @@ import Settings from './pages/Settings';
 import Investment from './pages/Investment';
 import StockAnalysis from './pages/StockAnalysis';
 import Housing from './pages/Housing';
+import Statements from './pages/Statements';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           <Route path="/investment" element={<Investment />} />
           <Route path="/stocks" element={<StockAnalysis />} />
           <Route path="/housing" element={<Housing />} />
+          <Route path="/statements" element={<Statements />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>

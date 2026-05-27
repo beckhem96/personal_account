@@ -26,7 +26,7 @@ public class CategoryService {
 
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
-        Category category = new Category(request.name(), request.type());
+        Category category = new Category(request.name(), request.type(), request.yearEndCategory());
         Category saved = categoryRepository.save(category);
         return CategoryResponse.from(saved);
     }
@@ -41,7 +41,7 @@ public class CategoryService {
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + id));
-        category.update(request.name(), request.type());
+        category.update(request.name(), request.type(), request.yearEndCategory());
         return CategoryResponse.from(category);
     }
 

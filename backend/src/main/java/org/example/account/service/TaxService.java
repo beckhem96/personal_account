@@ -1,16 +1,32 @@
 package org.example.account.service;
 
+import lombok.RequiredArgsConstructor;
+import org.example.account.domain.CardType;
+import org.example.account.domain.Category;
+import org.example.account.domain.PaymentMethod;
+import org.example.account.domain.Transaction;
+import org.example.account.domain.TransactionType;
+import org.example.account.domain.YearEndCategory;
 import org.example.account.dto.TaxStockRequest;
 import org.example.account.dto.TaxStockResponse;
 import org.example.account.dto.YearEndSettlementRequest;
 import org.example.account.dto.YearEndSettlementResponse;
+import org.example.account.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class TaxService {
+
+    private final TransactionRepository transactionRepository;
+
+    private static final String SALARY_CATEGORY_NAME = "월급";
 
     private static final BigDecimal STOCK_DEDUCTION = new BigDecimal("2500000"); // 주식 양도 기본공제 250만원
     private static final BigDecimal TAX_RATE = new BigDecimal("0.22"); // 양도세 20% + 지방세 2%
@@ -129,6 +145,51 @@ public class TaxService {
             return "체크카드/현금영수증은 공제율이 30%로 신용카드(15%)의 2배입니다. 가능하면 체크카드 사용 비중을 늘리세요.";
         }
         return "현재 체크카드/현금영수증 위주로 사용 중입니다. 신용카드 혜택과 공제율 차이를 비교해 균형 있게 사용하세요.";
+    }
+
+    @Transactional(readOnly = true)
+    public YearEndSettlementRequest computeYearEndFromTransactions(int year) {
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
+        List<Transaction> txs = transactionRepository.findConfirmedWithJoinsBetween(start, end);
+
+        BigDecimal salary = BigDecimal.ZERO;
+        BigDecimal credit = BigDecimal.ZERO;
+        BigDecimal debitCash = BigDecimal.ZERO;
+        BigDecimal market = BigDecimal.ZERO;
+        BigDecimal transport = BigDecimal.ZERO;
+
+        for (Transaction t : txs) {
+            Category category = t.getCategory();
+            if (category == null) continue;
+            BigDecimal amount = nz(t.getAmount());
+
+            if (category.getType() == TransactionType.INCOME && SALARY_CATEGORY_NAME.equals(category.getName())) {
+                salary = salary.add(amount);
+                continue;
+            }
+
+            if (category.getType() != TransactionType.EXPENSE) continue;
+
+            // 신용/체크/현금 분류 (PaymentMethod + Card.type)
+            PaymentMethod pm = t.getPaymentMethod();
+            if (pm == PaymentMethod.CARD && t.getCard() != null && t.getCard().getType() == CardType.CREDIT) {
+                credit = credit.add(amount);
+            } else if (pm == PaymentMethod.CARD || pm == PaymentMethod.CASH) {
+                // 체크카드 + 현금 + (카드 정보 없는 CARD 결제는 안전하게 체크/현금으로)
+                debitCash = debitCash.add(amount);
+            }
+
+            // 전통시장/대중교통 추가 합산 (신용/체크와 중복 합산 — 단순화 정책)
+            YearEndCategory yec = category.yearEndCategoryOrNone();
+            if (yec == YearEndCategory.TRADITIONAL_MARKET) {
+                market = market.add(amount);
+            } else if (yec == YearEndCategory.PUBLIC_TRANSPORT) {
+                transport = transport.add(amount);
+            }
+        }
+
+        return new YearEndSettlementRequest(salary, credit, debitCash, market, transport);
     }
 
     private BigDecimal nz(BigDecimal v) {

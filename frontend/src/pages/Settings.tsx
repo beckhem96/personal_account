@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory, getCards, createCard, deleteCard } from '../api/services';
-import type { CategoryResponse, CategoryRequest, TransactionType, Card, CardRequest, CardType } from '../types';
+import type { CategoryResponse, CategoryRequest, TransactionType, Card, CardRequest, CardType, YearEndCategory } from '../types';
 import { cn } from '../utils';
 import { Plus, Edit2, Trash2, X, CreditCard, Tag } from 'lucide-react';
 
@@ -23,7 +23,7 @@ const SettingsPage = () => {
     // Category Modal
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [editingCategory, setEditingCategory] = useState<CategoryResponse | null>(null);
-    const [categoryForm, setCategoryForm] = useState<CategoryRequest>({ name: '', type: 'EXPENSE' });
+    const [categoryForm, setCategoryForm] = useState<CategoryRequest>({ name: '', type: 'EXPENSE', yearEndCategory: 'NONE' });
     const [categoryError, setCategoryError] = useState('');
 
     // Card Modal
@@ -47,16 +47,25 @@ const SettingsPage = () => {
     // Category handlers
     const openCategoryCreate = () => {
         setEditingCategory(null);
-        setCategoryForm({ name: '', type: 'EXPENSE' });
+        setCategoryForm({ name: '', type: 'EXPENSE', yearEndCategory: 'NONE' });
         setCategoryError('');
         setIsCategoryModalOpen(true);
     };
 
     const openCategoryEdit = (cat: CategoryResponse) => {
         setEditingCategory(cat);
-        setCategoryForm({ name: cat.name, type: cat.type });
+        setCategoryForm({ name: cat.name, type: cat.type, yearEndCategory: cat.yearEndCategory ?? 'NONE' });
         setCategoryError('');
         setIsCategoryModalOpen(true);
+    };
+
+    const handleYearEndCategoryChange = async (cat: CategoryResponse, value: YearEndCategory) => {
+        try {
+            await updateCategory(cat.id, { name: cat.name, type: cat.type, yearEndCategory: value });
+            fetchData();
+        } catch (error) {
+            alert('연말정산 매핑 변경에 실패했습니다.');
+        }
     };
 
     const handleCategorySubmit = async (e: React.FormEvent) => {
@@ -149,30 +158,44 @@ const SettingsPage = () => {
                                     {group.items.map(cat => (
                                         <div
                                             key={cat.id}
-                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group"
+                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors group gap-3"
                                         >
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-3 min-w-0">
                                                 <span className={cn(
-                                                    "px-2.5 py-1 rounded-full text-xs font-semibold border",
+                                                    "px-2.5 py-1 rounded-full text-xs font-semibold border flex-shrink-0",
                                                     TRANSACTION_TYPE_COLORS[cat.type]
                                                 )}>
                                                     {TRANSACTION_TYPE_LABELS[cat.type]}
                                                 </span>
-                                                <span className="font-medium text-slate-800">{cat.name}</span>
+                                                <span className="font-medium text-slate-800 truncate">{cat.name}</span>
                                             </div>
-                                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button
-                                                    onClick={() => openCategoryEdit(cat)}
-                                                    className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
-                                                >
-                                                    <Edit2 size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteCategory(cat.id)}
-                                                    className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                {cat.type === 'EXPENSE' && (
+                                                    <select
+                                                        value={cat.yearEndCategory ?? 'NONE'}
+                                                        onChange={e => handleYearEndCategoryChange(cat, e.target.value as YearEndCategory)}
+                                                        className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white focus:ring-2 focus:ring-green-500 outline-none"
+                                                        title="연말정산 분류 매핑"
+                                                    >
+                                                        <option value="NONE">매핑 없음</option>
+                                                        <option value="TRADITIONAL_MARKET">전통시장</option>
+                                                        <option value="PUBLIC_TRANSPORT">대중교통</option>
+                                                    </select>
+                                                )}
+                                                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => openCategoryEdit(cat)}
+                                                        className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-700 transition-colors"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteCategory(cat.id)}
+                                                        className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
@@ -274,6 +297,21 @@ const SettingsPage = () => {
                                     <option value="TRANSFER">이체</option>
                                 </select>
                             </div>
+                            {categoryForm.type === 'EXPENSE' && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">연말정산 분류 (선택)</label>
+                                    <select
+                                        className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={categoryForm.yearEndCategory ?? 'NONE'}
+                                        onChange={e => setCategoryForm({ ...categoryForm, yearEndCategory: e.target.value as YearEndCategory })}
+                                    >
+                                        <option value="NONE">매핑 없음</option>
+                                        <option value="TRADITIONAL_MARKET">전통시장</option>
+                                        <option value="PUBLIC_TRANSPORT">대중교통</option>
+                                    </select>
+                                    <p className="text-xs text-slate-400 mt-1.5">"내 거래 기반" 연말정산에서 이 카테고리의 거래를 어느 항목으로 분류할지 지정합니다.</p>
+                                </div>
+                            )}
                             {categoryError && (
                                 <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-lg">{categoryError}</p>
                             )}

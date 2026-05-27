@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAssets, createAsset, updateAsset, deleteAsset, setDefaultAsset, getNetWorth, getCards, createCard, deleteCard } from '../api/services';
-import type { AssetResponse, AssetType, NetWorthResponse, AssetRequest, Card, CardRequest, CardType } from '../types';
+import type { AssetResponse, AssetType, NetWorthResponse, AssetRequest, Card, CardRequest, CardType, CardCompany } from '../types';
 import { formatCurrency, cn, formatNumber, formatExpr, evaluateExpr } from '../utils';
 import { Plus, Edit2, Building2, TrendingUp, DollarSign, X, CreditCard, Trash2, Star } from 'lucide-react';
 
@@ -26,7 +26,8 @@ const AssetsPage = () => {
     const [isCardFormOpen, setIsCardFormOpen] = useState(false);
     const [cardFormData, setCardFormData] = useState<CardRequest>({
         name: '',
-        type: 'CREDIT'
+        type: 'CREDIT',
+        company: null
     });
 
     useEffect(() => {
@@ -72,7 +73,7 @@ const AssetsPage = () => {
         try {
             await createCard(cardFormData);
             setIsCardFormOpen(false);
-            setCardFormData({ name: '', type: 'CREDIT' });
+            setCardFormData({ name: '', type: 'CREDIT', company: null });
             fetchData();
         } catch (error) {
             alert('Failed to save card');
@@ -441,13 +442,28 @@ const AssetsPage = () => {
                             </div>
                             <div>
                                 <label className="block text-sm font-semibold text-slate-700 mb-2">Type</label>
-                                <select 
+                                <select
                                     className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                                     value={cardFormData.type}
                                     onChange={e => setCardFormData({...cardFormData, type: e.target.value as CardType})}
                                 >
                                     <option value="CREDIT">Credit Card</option>
                                     <option value="CHECK">Check/Debit Card</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-2">카드사 (명세서 가져오기용)</label>
+                                <select
+                                    className="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={cardFormData.company ?? ''}
+                                    onChange={e => setCardFormData({...cardFormData, company: (e.target.value || null) as CardCompany | null})}
+                                >
+                                    <option value="">미지정</option>
+                                    <option value="HANA">하나카드</option>
+                                    <option value="SAMSUNG">삼성카드</option>
+                                    <option value="HYUNDAI">현대카드</option>
+                                    <option value="SHINHAN">신한카드</option>
+                                    <option value="KB">KB국민카드</option>
                                 </select>
                             </div>
                             <button type="submit" className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-semibold hover:bg-slate-800 transition mt-2">

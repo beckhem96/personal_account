@@ -16,7 +16,8 @@ import type {
     LoanCostRequest, LoanCostResponse,
     LoanRepaymentRequest, LoanRepaymentResponse,
     LoanProductInfo,
-    ApartmentDealsResponse, RegionTree
+    ApartmentDealsResponse, RegionTree,
+    SupportedCardCompany, StatementImportResponse
 } from '../types';
 
 // Categories
@@ -50,8 +51,29 @@ export const createCard = async (data: CardRequest) => {
     return response.data;
 };
 
+export const updateCard = async (id: number, data: CardRequest) => {
+    const response = await api.put<Card>(`/cards/${id}`, data);
+    return response.data;
+};
+
 export const deleteCard = async (id: number) => {
     await api.delete(`/cards/${id}`);
+};
+
+// Statements
+export const getSupportedCardCompanies = async () => {
+    const response = await api.get<SupportedCardCompany[]>('/statements/supported');
+    return response.data;
+};
+
+export const importStatement = async (cardId: number, file: File) => {
+    const formData = new FormData();
+    formData.append('cardId', String(cardId));
+    formData.append('file', file);
+    const response = await api.post<StatementImportResponse>('/statements/import', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
 };
 
 // Recurring Transactions
@@ -173,6 +195,11 @@ export const calculateStockTax = async (data: TaxStockRequest) => {
 
 export const simulateYearEnd = async (data: YearEndSettlementRequest) => {
     const response = await api.post<YearEndSettlementResponse>('/tax/year-end', data);
+    return response.data;
+};
+
+export const getAutoYearEndSettlement = async (year: number) => {
+    const response = await api.get<YearEndSettlementRequest>('/tax/year-end/auto', { params: { year } });
     return response.data;
 };
 

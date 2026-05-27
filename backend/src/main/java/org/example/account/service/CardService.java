@@ -20,7 +20,7 @@ public class CardService {
 
     @Transactional
     public CardResponse createCard(CardRequest request) {
-        Card card = new Card(request.name(), request.type());
+        Card card = new Card(request.name(), request.type(), request.company());
         return CardResponse.from(cardRepository.save(card));
     }
 
@@ -28,6 +28,14 @@ public class CardService {
         return cardRepository.findAll().stream()
                 .map(CardResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public CardResponse updateCard(Long id, CardRequest request) {
+        Card card = cardRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("카드를 찾을 수 없습니다: " + id));
+        card.update(request.name(), request.type(), request.company());
+        return CardResponse.from(card);
     }
 
     @Transactional

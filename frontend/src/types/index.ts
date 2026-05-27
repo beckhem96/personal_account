@@ -3,29 +3,59 @@ export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type PaymentMethod = 'CASH' | 'CARD' | 'BANK_TRANSFER';
 export type AssetType = 'CASH' | 'SAVINGS' | 'STOCK' | 'DEBT';
 export type CardType = 'CREDIT' | 'CHECK';
+export type CardCompany = 'HANA' | 'SAMSUNG' | 'HYUNDAI' | 'SHINHAN' | 'KB';
 
 // Card
 export interface Card {
     id: number;
     name: string;
     type: CardType;
+    company?: CardCompany | null;
 }
 
 export interface CardRequest {
     name: string;
     type: CardType;
+    company?: CardCompany | null;
+}
+
+// Statement import
+export interface SupportedCardCompany {
+    code: CardCompany;
+    displayName: string;
+}
+
+export interface ImportedItem {
+    date: string;
+    merchant: string;
+    amount: number;
+    categoryName: string;
+    installmentSeq?: number | null;
+    installmentMonths?: number | null;
+}
+
+export interface StatementImportResponse {
+    imported: number;
+    skipped: number;
+    failed: number;
+    unclassified: number;
+    summary: ImportedItem[];
 }
 
 // Category
+export type YearEndCategory = 'NONE' | 'TRADITIONAL_MARKET' | 'PUBLIC_TRANSPORT';
+
 export interface Category {
     id: number;
     name: string;
     type: TransactionType;
+    yearEndCategory?: YearEndCategory;
 }
 
 export interface CategoryRequest {
     name: string;
     type: TransactionType;
+    yearEndCategory?: YearEndCategory | null;
 }
 
 // Budget
