@@ -12,13 +12,14 @@
 | 3 | [카드 명세서 엑셀 import](./03-card-statement-import.md) | 하나카드 명세서 → Gemini 자동 분류 → 일괄 등록 |
 | 4 | [연말정산 내 거래 기반 자동 산출](./04-year-end-from-transactions.md) | 등록된 거래에서 5개 항목 자동 집계 + 카테고리 매핑 |
 | 5 | [청약 일정 조회](./05-subscription-listings.md) | 청약홈 API 연동, 수도권 5개 지역의 오늘 접수중 청약 표시 |
+| 6 | [LH 공공분양·임대 청약 조회](./06-lh-public-subscriptions.md) | LH 분양임대공고문 API 연동, 청약 페이지에 'LH 공공' 탭 추가 |
 
 ## 기술 스택 (전체)
 
 - **백엔드**: Java 17, Spring Boot 3.4.1, Spring Data JPA, Gradle (멀티프로젝트)
 - **DB**: MySQL 8.0 (Docker)
 - **프론트엔드**: React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4, Recharts
-- **외부 API**: 국토교통부 실거래가, 한국부동산원 청약홈 (공공데이터포털), Google Gemini
+- **외부 API**: 국토교통부 실거래가, 한국부동산원 청약홈, 한국토지주택공사(LH) 분양임대공고 (공공데이터포털), Google Gemini
 - **테스트**: JUnit 5 + AssertJ + Mockito
 
 ## 실행
