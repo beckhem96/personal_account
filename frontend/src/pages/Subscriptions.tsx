@@ -39,7 +39,7 @@ const SubscriptionsPage = () => {
                         <Bell size={28} className="text-blue-600" /> 청약 일정
                     </h1>
                     <p className="text-slate-500 mt-1">
-                        서울 + 경기 4개 지역 (의정부/남양주/하남/구리) · 오늘 접수 가능한 공고
+                        서울 + 경기 4개 지역 (의정부/남양주/하남/구리) · 접수 예정 + 진행중 공고
                     </p>
                 </div>
                 <div className="inline-flex rounded-xl bg-slate-100 p-1 self-start">
@@ -337,7 +337,6 @@ const EmptyNotice = () => (
 
 const ApplyhomeCard = ({ item, stage }: { item: SubscriptionItem; stage: SubscriptionRank }) => {
     const { begin, end } = pickStageDates(item, stage);
-    const daysLeft = end ? daysUntil(end) : null;
 
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3 hover:shadow-md transition">
@@ -358,11 +357,7 @@ const ApplyhomeCard = ({ item, stage }: { item: SubscriptionItem; stage: Subscri
             <div className="flex items-center gap-1.5 text-sm">
                 <Calendar size={14} className="text-slate-400" />
                 <span className="text-slate-700">{fmtDate(begin)} ~ {fmtDate(end)}</span>
-                {daysLeft !== null && daysLeft >= 0 && (
-                    <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${daysLeft <= 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                        D-{daysLeft}
-                    </span>
-                )}
+                <ScheduleBadge begin={begin} end={end} />
             </div>
 
             {item.totalSupplyHouseholds !== null && (
@@ -421,6 +416,27 @@ const LhCard = ({ item }: { item: LhNoticeItem }) => {
             {item.detailUrl && <DetailLink href={item.detailUrl} label="LH 청약센터에서 보기" />}
         </div>
     );
+};
+
+// 접수 시작 전이면 '시작 D-N'(예정, 파랑), 진행중이면 '마감 D-N'(임박 빨강/여유 초록)
+const ScheduleBadge = ({ begin, end }: { begin: string | null; end: string | null }) => {
+    const toBegin = begin ? daysUntil(begin) : null;
+    if (toBegin !== null && toBegin > 0) {
+        return (
+            <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+                시작 D-{toBegin}
+            </span>
+        );
+    }
+    const toEnd = end ? daysUntil(end) : null;
+    if (toEnd !== null && toEnd >= 0) {
+        return (
+            <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${toEnd <= 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                마감 D-{toEnd}
+            </span>
+        );
+    }
+    return null;
 };
 
 const DetailLink = ({ href, label }: { href: string; label: string }) => (

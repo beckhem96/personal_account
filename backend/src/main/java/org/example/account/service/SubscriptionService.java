@@ -88,8 +88,8 @@ public class SubscriptionService {
         LocalDate secondEnd = firstNonNullDate(raw, "GNRL_RNK2_CRSPAREA_ENDDE", "GNRL_RNK2_ETC_GG_ENDDE", "GNRL_RNK2_ETC_AREA_ENDDE");
 
         List<SubscriptionRank> active = new ArrayList<>();
-        if (anyRangeOngoing(raw, today, RNK1_RANGES)) active.add(SubscriptionRank.FIRST);
-        if (anyRangeOngoing(raw, today, RNK2_RANGES)) active.add(SubscriptionRank.SECOND);
+        if (anyRangeOpenOrUpcoming(raw, today, RNK1_RANGES)) active.add(SubscriptionRank.FIRST);
+        if (anyRangeOpenOrUpcoming(raw, today, RNK2_RANGES)) active.add(SubscriptionRank.SECOND);
 
         return new SubscriptionItem(
                 houseManageNo,
@@ -107,11 +107,11 @@ public class SubscriptionService {
         );
     }
 
-    private boolean anyRangeOngoing(JsonNode raw, LocalDate today, String[][] ranges) {
+    private boolean anyRangeOpenOrUpcoming(JsonNode raw, LocalDate today, String[][] ranges) {
         for (String[] pair : ranges) {
             LocalDate begin = date(raw, pair[0]);
             LocalDate end = date(raw, pair[1]);
-            if (isOngoing(today, begin, end)) return true;
+            if (isOpenOrUpcoming(today, begin, end)) return true;
         }
         return false;
     }
@@ -133,7 +133,7 @@ public class SubscriptionService {
         LocalDate end = date(raw, "SUBSCRPT_RCEPT_ENDDE", "GNRL_RCEPT_ENDDE", "RCEPT_ENDDE");
 
         List<SubscriptionRank> active = new ArrayList<>();
-        if (isOngoing(today, begin, end)) active.add(SubscriptionRank.REMAINDER);
+        if (isOpenOrUpcoming(today, begin, end)) active.add(SubscriptionRank.REMAINDER);
 
         return new SubscriptionItem(
                 houseManageNo,
@@ -167,9 +167,13 @@ public class SubscriptionService {
         return false;
     }
 
-    static boolean isOngoing(LocalDate today, LocalDate begin, LocalDate end) {
-        if (begin == null || end == null) return false;
-        return !today.isBefore(begin) && !today.isAfter(end);
+    /**
+     * 접수 예정(시작 전) + 진행중을 모두 포함한다. 즉 마감일이 아직 지나지 않은 단계.
+     * 마감일이 없으면 판정 불가로 제외.
+     */
+    static boolean isOpenOrUpcoming(LocalDate today, LocalDate begin, LocalDate end) {
+        if (end == null) return false;
+        return !today.isAfter(end);
     }
 
     private List<SubscriptionItem> filterByStage(List<SubscriptionItem> items, SubscriptionRank stage) {

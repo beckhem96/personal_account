@@ -90,7 +90,7 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void 오늘이_접수기간_밖이면_빈_단계() {
+    void 마감일이_지난_공고는_빈_단계() {
         LocalDate today = LocalDate.of(2026, 6, 1);
         ObjectNode raw = mapper.createObjectNode();
         raw.put("HOUSE_NM", "테스트단지");
@@ -103,6 +103,21 @@ class SubscriptionServiceTest {
         SubscriptionItem item = service.toItemFromApt(raw, today);
 
         assertThat(item.activeStages()).isEmpty();
+    }
+
+    @Test
+    void 접수_시작_전_예정_공고도_단계_활성() {
+        LocalDate today = LocalDate.of(2026, 6, 1);
+        ObjectNode raw = mapper.createObjectNode();
+        raw.put("HOUSE_NM", "예정단지");
+        raw.put("HSSPLY_ADRES", "서울특별시 강남구");
+        // 1순위 접수가 아직 시작 전(미래)
+        raw.put("GNRL_RNK1_CRSPAREA_RCPTDE", "2026-06-10");
+        raw.put("GNRL_RNK1_CRSPAREA_ENDDE", "2026-06-12");
+
+        SubscriptionItem item = service.toItemFromApt(raw, today);
+
+        assertThat(item.activeStages()).containsExactly(SubscriptionRank.FIRST);
     }
 
     @Test
