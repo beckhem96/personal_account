@@ -18,7 +18,7 @@ import type {
     LoanProductInfo,
     ApartmentDealsResponse, RegionTree,
     SupportedCardCompany, StatementImportResponse,
-    SubscriptionsResponse
+    SubscriptionsResponse, LhNoticesResponse
 } from '../types';
 
 // Categories
@@ -289,5 +289,11 @@ export const getApartmentDeals = async (params: {
 // Subscriptions (청약 일정)
 export const getTodaySubscriptions = async () => {
     const response = await api.get<SubscriptionsResponse>('/subscriptions/today');
+    return response.data;
+};
+
+// LH 공공분양·임대 청약
+export const getLhSubscriptions = async () => {
+    const response = await api.get<LhNoticesResponse>('/subscriptions/lh/today');
     return response.data;
 };

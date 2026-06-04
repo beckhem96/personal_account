@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, RefreshCw, AlertCircle, Loader2, MapPin, Calendar, ExternalLink, Info, Building2 } from 'lucide-react';
-import { getTodaySubscriptions } from '../api/services';
-import type { SubscriptionItem, SubscriptionRank, SubscriptionsResponse } from '../types';
+import { Bell, RefreshCw, AlertCircle, Loader2, MapPin, Calendar, ExternalLink, Info, Building2, Landmark } from 'lucide-react';
+import { getTodaySubscriptions, getLhSubscriptions } from '../api/services';
+import type {
+    SubscriptionItem, SubscriptionRank, SubscriptionsResponse,
+    LhNoticeItem, LhNoticesResponse, LhSupplyCategory,
+} from '../types';
 
-const REGION_OPTIONS: Array<{ key: string; label: string; predicate: (it: SubscriptionItem) => boolean }> = [
-    { key: 'SEOUL', label: '서울', predicate: it => (it.regionLabel ?? '').includes('서울') },
-    { key: 'UIJEONGBU', label: '의정부', predicate: it => (it.address ?? '').includes('의정부') },
-    { key: 'NAMYANGJU', label: '남양주', predicate: it => (it.address ?? '').includes('남양주') },
-    { key: 'HANAM', label: '하남', predicate: it => (it.address ?? '').includes('하남') },
-    { key: 'GURI', label: '구리', predicate: it => (it.address ?? '').includes('구리') },
+type View = 'APPLYHOME' | 'LH';
+
+const REGION_OPTIONS: Array<{ key: string; label: string; token: string }> = [
+    { key: 'SEOUL', label: '서울', token: '서울' },
+    { key: 'UIJEONGBU', label: '의정부', token: '의정부' },
+    { key: 'NAMYANGJU', label: '남양주', token: '남양주' },
+    { key: 'HANAM', label: '하남', token: '하남' },
+    { key: 'GURI', label: '구리', token: '구리' },
 ];
 
 const RANK_LABEL: Record<SubscriptionRank, string> = {
@@ -24,6 +29,49 @@ const RANK_COLOR: Record<SubscriptionRank, string> = {
 };
 
 const SubscriptionsPage = () => {
+    const [view, setView] = useState<View>('APPLYHOME');
+
+    return (
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
+                        <Bell size={28} className="text-blue-600" /> 청약 일정
+                    </h1>
+                    <p className="text-slate-500 mt-1">
+                        서울 + 경기 4개 지역 (의정부/남양주/하남/구리) · 오늘 접수 가능한 공고
+                    </p>
+                </div>
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 self-start">
+                    <TabButton active={view === 'APPLYHOME'} onClick={() => setView('APPLYHOME')} icon={Building2}>
+                        청약홈 (APT)
+                    </TabButton>
+                    <TabButton active={view === 'LH'} onClick={() => setView('LH')} icon={Landmark}>
+                        LH 공공
+                    </TabButton>
+                </div>
+            </div>
+
+            {view === 'APPLYHOME' ? <ApplyhomeView /> : <LhView />}
+        </div>
+    );
+};
+
+const TabButton = ({ active, onClick, icon: Icon, children }: {
+    active: boolean; onClick: () => void; icon: React.ElementType; children: React.ReactNode;
+}) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-1.5 transition ${
+            active ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+        }`}
+    >
+        <Icon size={16} /> {children}
+    </button>
+);
+
+// ── 청약홈 (한국부동산원 APT 일반/무순위) ────────────────────────────────
+const ApplyhomeView = () => {
     const [data, setData] = useState<SubscriptionsResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -45,25 +93,11 @@ const SubscriptionsPage = () => {
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    useEffect(() => { fetchData(); }, []);
 
-    const filteredFirst = useMemo(() => filterByRegion(data?.firstRank ?? [], enabledRegions), [data, enabledRegions]);
-    const filteredSecond = useMemo(() => filterByRegion(data?.secondRank ?? [], enabledRegions), [data, enabledRegions]);
-    const filteredRemainder = useMemo(() => filterByRegion(data?.remainder ?? [], enabledRegions), [data, enabledRegions]);
-
-    const toggleRegion = (key: string) => {
-        const next = new Set(enabledRegions);
-        if (next.has(key)) next.delete(key); else next.add(key);
-        setEnabledRegions(next);
-    };
-
-    const toggleRank = (rank: SubscriptionRank) => {
-        const next = new Set(enabledRanks);
-        if (next.has(rank)) next.delete(rank); else next.add(rank);
-        setEnabledRanks(next);
-    };
+    const filteredFirst = useMemo(() => filterByRegion(data?.firstRank ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
+    const filteredSecond = useMemo(() => filterByRegion(data?.secondRank ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
+    const filteredRemainder = useMemo(() => filterByRegion(data?.remainder ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
 
     const sections: Array<{ rank: SubscriptionRank; items: SubscriptionItem[] }> = ([
         { rank: 'FIRST' as SubscriptionRank, items: filteredFirst },
@@ -76,72 +110,35 @@ const SubscriptionsPage = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-2">
-                        <Bell size={28} className="text-blue-600" /> 오늘 접수중인 청약
-                    </h1>
-                    <p className="text-slate-500 mt-1">
-                        {data?.asOf ?? ''} 기준 · 서울 + 경기 4개 지역 (의정부/남양주/하남/구리)
-                        {lastFetched && <span className="ml-2 text-xs text-slate-400">갱신: {lastFetched.toLocaleTimeString('ko-KR')}</span>}
-                    </p>
-                </div>
-                <button
-                    onClick={fetchData}
-                    disabled={loading}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 transition self-start"
-                >
-                    {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                    새로고침
-                </button>
-            </div>
+            <Toolbar onRefresh={fetchData} loading={loading} lastFetched={lastFetched} asOf={data?.asOf} />
 
             {apiKeyMissing && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start">
-                    <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
-                    <div className="text-sm text-amber-900">
-                        <p className="font-semibold mb-1">청약홈 API 키가 설정되지 않았습니다.</p>
-                        <p>공공데이터포털에서 "한국부동산원_청약홈 청약일정정보" API를 신청한 후, 프로젝트 루트의 <code className="bg-amber-100 px-1.5 py-0.5 rounded">.env</code> 파일에 <code className="bg-amber-100 px-1.5 py-0.5 rounded">APPLYHOME_API_KEY</code>를 설정하세요.</p>
-                    </div>
-                </div>
+                <KeyMissingNotice
+                    serviceName="한국부동산원_청약홈 청약일정정보"
+                    envVar="APPLYHOME_API_KEY"
+                />
             )}
-
-            {error && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 items-start">
-                    <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
-                    <p className="text-sm text-red-900">{error}</p>
-                </div>
-            )}
+            {error && <ErrorNotice message={error} />}
 
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
-                <div>
-                    <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">지역</h2>
-                    <div className="flex flex-wrap gap-2">
-                        {REGION_OPTIONS.map(opt => (
-                            <ToggleChip key={opt.key} active={enabledRegions.has(opt.key)} onClick={() => toggleRegion(opt.key)}>
-                                {opt.label}
-                            </ToggleChip>
-                        ))}
-                    </div>
-                </div>
-                <div>
-                    <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">순위</h2>
-                    <div className="flex flex-wrap gap-2">
-                        {(['FIRST', 'SECOND', 'REMAINDER'] as SubscriptionRank[]).map(r => (
-                            <ToggleChip key={r} active={enabledRanks.has(r)} onClick={() => toggleRank(r)}>
-                                {RANK_LABEL[r]}
-                            </ToggleChip>
-                        ))}
-                    </div>
-                </div>
+                <ChipGroup title="지역">
+                    {REGION_OPTIONS.map(opt => (
+                        <ToggleChip key={opt.key} active={enabledRegions.has(opt.key)} onClick={() => setEnabledRegions(toggle(enabledRegions, opt.key))}>
+                            {opt.label}
+                        </ToggleChip>
+                    ))}
+                </ChipGroup>
+                <ChipGroup title="순위">
+                    {(['FIRST', 'SECOND', 'REMAINDER'] as SubscriptionRank[]).map(r => (
+                        <ToggleChip key={r} active={enabledRanks.has(r)} onClick={() => setEnabledRanks(toggle(enabledRanks, r))}>
+                            {RANK_LABEL[r]}
+                        </ToggleChip>
+                    ))}
+                </ChipGroup>
             </div>
 
             {!loading && data && totalShown === 0 && !apiKeyMissing && (
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center text-slate-500">
-                    <Info size={36} className="mx-auto mb-3 opacity-60" />
-                    <p className="font-medium">선택한 조건에 해당하는 청약이 없습니다.</p>
-                    <p className="text-sm mt-1">필터를 조정하거나 새로고침해보세요.</p>
-                </div>
+                <EmptyNotice />
             )}
 
             {sections.map(({ rank, items }) => (
@@ -155,7 +152,7 @@ const SubscriptionsPage = () => {
                         </h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                             {items.map((item, idx) => (
-                                <SubscriptionCard key={`${item.houseManageNo ?? item.name}-${idx}`} item={item} stage={rank} />
+                                <ApplyhomeCard key={`${item.houseManageNo ?? item.name}-${idx}`} item={item} stage={rank} />
                             ))}
                         </div>
                     </section>
@@ -165,20 +162,170 @@ const SubscriptionsPage = () => {
     );
 };
 
+// ── LH 공공분양·임대 ─────────────────────────────────────────────────────
+const LH_TYPE_OPTIONS = ['공공분양', '신혼희망타운', '행복주택', '국민임대', '영구임대'];
+
+const LhView = () => {
+    const [data, setData] = useState<LhNoticesResponse | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set(REGION_OPTIONS.map(r => r.key)));
+    const [enabledTypes, setEnabledTypes] = useState<Set<string>>(new Set(LH_TYPE_OPTIONS));
+    const [lastFetched, setLastFetched] = useState<Date | null>(null);
+
+    const fetchData = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = await getLhSubscriptions();
+            setData(res);
+            setLastFetched(new Date());
+        } catch (e: any) {
+            setError(e?.response?.data?.message || e?.message || 'LH 공고를 불러올 수 없습니다.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchData(); }, []);
+
+    const narrow = (items: LhNoticeItem[]) => filterByType(filterByRegion(items, enabledRegions, lhRegionText), enabledTypes);
+    const sale = useMemo(() => narrow(data?.sale ?? []), [data, enabledRegions, enabledTypes]);
+    const rent = useMemo(() => narrow(data?.rent ?? []), [data, enabledRegions, enabledTypes]);
+
+    const totalShown = sale.length + rent.length;
+    const apiKeyMissing = data && !data.apiKeyConfigured;
+
+    return (
+        <div className="space-y-6">
+            <Toolbar onRefresh={fetchData} loading={loading} lastFetched={lastFetched} asOf={data?.asOf} />
+
+            {apiKeyMissing && (
+                <KeyMissingNotice
+                    serviceName="한국토지주택공사_분양임대공고문 조회 서비스"
+                    envVar="LH_API_KEY"
+                />
+            )}
+            {error && <ErrorNotice message={error} />}
+            {!apiKeyMissing && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
+                    <Info className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
+                    <p className="text-sm text-blue-900">
+                        LH API는 공공데이터포털에서 별도 "활용신청"이 필요합니다. 결과가 비어 있으면 신청 승인 여부를 확인하세요.
+                        목록에 접수기간이 없는 공고는 상세 링크에서 일정을 확인할 수 있습니다.
+                    </p>
+                </div>
+            )}
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-4">
+                <ChipGroup title="지역">
+                    {REGION_OPTIONS.map(opt => (
+                        <ToggleChip key={opt.key} active={enabledRegions.has(opt.key)} onClick={() => setEnabledRegions(toggle(enabledRegions, opt.key))}>
+                            {opt.label}
+                        </ToggleChip>
+                    ))}
+                </ChipGroup>
+                <ChipGroup title="공급유형">
+                    {LH_TYPE_OPTIONS.map(t => (
+                        <ToggleChip key={t} active={enabledTypes.has(t)} onClick={() => setEnabledTypes(toggle(enabledTypes, t))}>
+                            {t}
+                        </ToggleChip>
+                    ))}
+                </ChipGroup>
+            </div>
+
+            {!loading && data && totalShown === 0 && !apiKeyMissing && <EmptyNotice />}
+
+            <LhSection title="분양" category="SALE" items={sale} />
+            <LhSection title="임대" category="RENT" items={rent} />
+        </div>
+    );
+};
+
+const LhSection = ({ title, category, items }: { title: string; category: LhSupplyCategory; items: LhNoticeItem[] }) => {
+    if (items.length === 0) return null;
+    const color = category === 'SALE'
+        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+        : 'bg-violet-100 text-violet-800 border-violet-200';
+    return (
+        <section className="space-y-3">
+            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <span className={`px-3 py-1 rounded-full text-sm font-bold border ${color}`}>{title}</span>
+                <span className="text-slate-500 text-sm font-normal">{items.length}건</span>
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {items.map((item, idx) => (
+                    <LhCard key={`${item.panId ?? item.name}-${idx}`} item={item} />
+                ))}
+            </div>
+        </section>
+    );
+};
+
+// ── 공통 UI ──────────────────────────────────────────────────────────────
+const Toolbar = ({ onRefresh, loading, lastFetched, asOf }: {
+    onRefresh: () => void; loading: boolean; lastFetched: Date | null; asOf?: string;
+}) => (
+    <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-500">
+            {asOf ?? ''} 기준
+            {lastFetched && <span className="ml-2 text-xs text-slate-400">갱신: {lastFetched.toLocaleTimeString('ko-KR')}</span>}
+        </p>
+        <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2 transition"
+        >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            새로고침
+        </button>
+    </div>
+);
+
+const ChipGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div>
+        <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{title}</h2>
+        <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+);
+
 const ToggleChip = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
     <button
         onClick={onClick}
         className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${
-            active
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+            active ? 'bg-blue-600 text-white border-blue-600 shadow-sm' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
         }`}
     >
         {children}
     </button>
 );
 
-const SubscriptionCard = ({ item, stage }: { item: SubscriptionItem; stage: SubscriptionRank }) => {
+const KeyMissingNotice = ({ serviceName, envVar }: { serviceName: string; envVar: string }) => (
+    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start">
+        <AlertCircle className="text-amber-600 flex-shrink-0 mt-0.5" size={18} />
+        <div className="text-sm text-amber-900">
+            <p className="font-semibold mb-1">API 키가 설정되지 않았습니다.</p>
+            <p>공공데이터포털에서 "{serviceName}"를 신청한 후, 프로젝트 루트의 <code className="bg-amber-100 px-1.5 py-0.5 rounded">.env</code> 파일에 <code className="bg-amber-100 px-1.5 py-0.5 rounded">{envVar}</code>를 설정하세요.</p>
+        </div>
+    </div>
+);
+
+const ErrorNotice = ({ message }: { message: string }) => (
+    <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 items-start">
+        <AlertCircle className="text-red-600 flex-shrink-0 mt-0.5" size={18} />
+        <p className="text-sm text-red-900">{message}</p>
+    </div>
+);
+
+const EmptyNotice = () => (
+    <div className="bg-slate-50 border border-slate-200 rounded-2xl p-12 text-center text-slate-500">
+        <Info size={36} className="mx-auto mb-3 opacity-60" />
+        <p className="font-medium">선택한 조건에 해당하는 청약이 없습니다.</p>
+        <p className="text-sm mt-1">필터를 조정하거나 새로고침해보세요.</p>
+    </div>
+);
+
+const ApplyhomeCard = ({ item, stage }: { item: SubscriptionItem; stage: SubscriptionRank }) => {
     const { begin, end } = pickStageDates(item, stage);
     const daysLeft = end ? daysUntil(end) : null;
 
@@ -186,11 +333,9 @@ const SubscriptionCard = ({ item, stage }: { item: SubscriptionItem; stage: Subs
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3 hover:shadow-md transition">
             <div className="flex items-start justify-between gap-3">
                 <h3 className="font-bold text-slate-900 leading-snug">{item.name}</h3>
-                <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                    {item.houseType && (
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">{item.houseType}</span>
-                    )}
-                </div>
+                {item.houseType && (
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full flex-shrink-0">{item.houseType}</span>
+                )}
             </div>
 
             {item.address && (
@@ -202,13 +347,9 @@ const SubscriptionCard = ({ item, stage }: { item: SubscriptionItem; stage: Subs
 
             <div className="flex items-center gap-1.5 text-sm">
                 <Calendar size={14} className="text-slate-400" />
-                <span className="text-slate-700">
-                    {fmtDate(begin)} ~ {fmtDate(end)}
-                </span>
+                <span className="text-slate-700">{fmtDate(begin)} ~ {fmtDate(end)}</span>
                 {daysLeft !== null && daysLeft >= 0 && (
-                    <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${
-                        daysLeft <= 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                    }`}>
+                    <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${daysLeft <= 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                         D-{daysLeft}
                     </span>
                 )}
@@ -221,23 +362,86 @@ const SubscriptionCard = ({ item, stage }: { item: SubscriptionItem; stage: Subs
                 </div>
             )}
 
-            {item.applyhomeUrl && (
-                <a
-                    href={item.applyhomeUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 pt-1"
-                >
-                    청약홈에서 보기 <ExternalLink size={14} />
-                </a>
-            )}
+            {item.applyhomeUrl && <DetailLink href={item.applyhomeUrl} label="청약홈에서 보기" />}
         </div>
     );
 };
 
-function filterByRegion(items: SubscriptionItem[], enabled: Set<string>): SubscriptionItem[] {
+const LhCard = ({ item }: { item: LhNoticeItem }) => {
+    const daysLeft = item.rcptEnd ? daysUntil(item.rcptEnd) : null;
+    return (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3 hover:shadow-md transition">
+            <div className="flex items-start justify-between gap-3">
+                <h3 className="font-bold text-slate-900 leading-snug">{item.name}</h3>
+                {item.supplyTypeName && (
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full flex-shrink-0">{item.supplyTypeName}</span>
+                )}
+            </div>
+
+            {item.regionLabel && (
+                <div className="flex items-start gap-1.5 text-sm text-slate-600">
+                    <MapPin size={14} className="flex-shrink-0 mt-0.5 text-slate-400" />
+                    <span className="leading-snug">{item.regionLabel}</span>
+                </div>
+            )}
+
+            {(item.rcptBegin || item.rcptEnd) && (
+                <div className="flex items-center gap-1.5 text-sm">
+                    <Calendar size={14} className="text-slate-400" />
+                    <span className="text-slate-700">{fmtDate(item.rcptBegin)} ~ {fmtDate(item.rcptEnd)}</span>
+                    {daysLeft !== null && daysLeft >= 0 && (
+                        <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${daysLeft <= 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                            D-{daysLeft}
+                        </span>
+                    )}
+                </div>
+            )}
+
+            {item.noticeStatus && (
+                <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">{item.noticeStatus}</span>
+            )}
+
+            {item.detailUrl && <DetailLink href={item.detailUrl} label="LH 청약센터에서 보기" />}
+        </div>
+    );
+};
+
+const DetailLink = ({ href, label }: { href: string; label: string }) => (
+    <a href={href} target="_blank" rel="noreferrer"
+       className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 pt-1">
+        {label} <ExternalLink size={14} />
+    </a>
+);
+
+// ── 유틸 ────────────────────────────────────────────────────────────────
+function toggle<T>(set: Set<T>, key: T): Set<T> {
+    const next = new Set(set);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    return next;
+}
+
+function applyhomeRegionText(it: SubscriptionItem): string {
+    return `${it.regionLabel ?? ''} ${it.address ?? ''}`;
+}
+
+function lhRegionText(it: LhNoticeItem): string {
+    return `${it.regionLabel ?? ''} ${it.name ?? ''}`;
+}
+
+function filterByRegion<T>(items: T[], enabled: Set<string>, textOf: (it: T) => string): T[] {
     if (enabled.size === REGION_OPTIONS.length) return items;
-    return items.filter(it => REGION_OPTIONS.some(opt => enabled.has(opt.key) && opt.predicate(it)));
+    return items.filter(it => {
+        const text = textOf(it);
+        return REGION_OPTIONS.some(opt => enabled.has(opt.key) && text.includes(opt.token));
+    });
+}
+
+function filterByType(items: LhNoticeItem[], enabled: Set<string>): LhNoticeItem[] {
+    if (enabled.size === LH_TYPE_OPTIONS.length) return items;
+    return items.filter(it => {
+        const type = it.supplyTypeName ?? '';
+        return LH_TYPE_OPTIONS.some(t => enabled.has(t) && type.includes(t));
+    });
 }
 
 function pickStageDates(item: SubscriptionItem, stage: SubscriptionRank): { begin: string | null; end: string | null } {

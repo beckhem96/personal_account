@@ -338,3 +338,26 @@ export interface SubscriptionsResponse {
     secondRank: SubscriptionItem[];
     remainder: SubscriptionItem[];
 }
+
+// LH 공공분양·임대 청약
+export type LhSupplyCategory = 'SALE' | 'RENT';
+
+export interface LhNoticeItem {
+    panId: string | null;
+    name: string;
+    supplyTypeName: string | null;
+    category: LhSupplyCategory;
+    regionLabel: string | null;
+    noticeStatus: string | null;
+    noticeDate: string | null;
+    rcptBegin: string | null;
+    rcptEnd: string | null;
+    detailUrl: string | null;
+}
+
+export interface LhNoticesResponse {
+    asOf: string;
+    apiKeyConfigured: boolean;
+    sale: LhNoticeItem[];
+    rent: LhNoticeItem[];
+}
