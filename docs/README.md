@@ -11,13 +11,14 @@
 | 2 | [주택 구매 비용 계산기](./02-housing-calculator.md) | 취득세·중개수수료·대출 원리금·국토부 실거래가 |
 | 3 | [카드 명세서 엑셀 import](./03-card-statement-import.md) | 하나카드 명세서 → Gemini 자동 분류 → 일괄 등록 |
 | 4 | [연말정산 내 거래 기반 자동 산출](./04-year-end-from-transactions.md) | 등록된 거래에서 5개 항목 자동 집계 + 카테고리 매핑 |
+| 5 | [청약 일정 조회](./05-subscription-listings.md) | 청약홈 API 연동, 수도권 5개 지역의 오늘 접수중 청약 표시 |
 
 ## 기술 스택 (전체)
 
 - **백엔드**: Java 17, Spring Boot 3.4.1, Spring Data JPA, Gradle (멀티프로젝트)
 - **DB**: MySQL 8.0 (Docker)
 - **프론트엔드**: React 19, TypeScript 5.9, Vite 7, Tailwind CSS 4, Recharts
-- **외부 API**: 국토교통부 실거래가(공공데이터포털), Google Gemini
+- **외부 API**: 국토교통부 실거래가, 한국부동산원 청약홈 (공공데이터포털), Google Gemini
 - **테스트**: JUnit 5 + AssertJ + Mockito
 
 ## 실행
