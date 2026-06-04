@@ -163,14 +163,12 @@ const ApplyhomeView = () => {
 };
 
 // ── LH 공공분양·임대 ─────────────────────────────────────────────────────
-const LH_TYPE_OPTIONS = ['공공분양', '신혼희망타운', '행복주택', '국민임대', '영구임대'];
-
 const LhView = () => {
     const [data, setData] = useState<LhNoticesResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set(REGION_OPTIONS.map(r => r.key)));
-    const [enabledTypes, setEnabledTypes] = useState<Set<string>>(new Set(LH_TYPE_OPTIONS));
+    const [disabledTypes, setDisabledTypes] = useState<Set<string>>(new Set());
     const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
     const fetchData = async () => {
@@ -179,6 +177,7 @@ const LhView = () => {
         try {
             const res = await getLhSubscriptions();
             setData(res);
+            setDisabledTypes(new Set()); // 새 데이터 로드 시 전체 선택
             setLastFetched(new Date());
         } catch (e: any) {
             setError(e?.response?.data?.message || e?.message || 'LH 공고를 불러올 수 없습니다.');
@@ -189,9 +188,18 @@ const LhView = () => {
 
     useEffect(() => { fetchData(); }, []);
 
-    const narrow = (items: LhNoticeItem[]) => filterByType(filterByRegion(items, enabledRegions, lhRegionText), enabledTypes);
-    const sale = useMemo(() => narrow(data?.sale ?? []), [data, enabledRegions, enabledTypes]);
-    const rent = useMemo(() => narrow(data?.rent ?? []), [data, enabledRegions, enabledTypes]);
+    // 공급유형 칩은 응답에 실제로 존재하는 유형명(AIS_TP_CD_NM)으로 동적 구성
+    const availableTypes = useMemo(() => {
+        const set = new Set<string>();
+        [...(data?.sale ?? []), ...(data?.rent ?? [])].forEach(it => {
+            if (it.supplyTypeName) set.add(it.supplyTypeName);
+        });
+        return Array.from(set).sort();
+    }, [data]);
+
+    const narrow = (items: LhNoticeItem[]) => filterByType(filterByRegion(items, enabledRegions, lhRegionText), disabledTypes);
+    const sale = useMemo(() => narrow(data?.sale ?? []), [data, enabledRegions, disabledTypes]);
+    const rent = useMemo(() => narrow(data?.rent ?? []), [data, enabledRegions, disabledTypes]);
 
     const totalShown = sale.length + rent.length;
     const apiKeyMissing = data && !data.apiKeyConfigured;
@@ -225,13 +233,15 @@ const LhView = () => {
                         </ToggleChip>
                     ))}
                 </ChipGroup>
-                <ChipGroup title="공급유형">
-                    {LH_TYPE_OPTIONS.map(t => (
-                        <ToggleChip key={t} active={enabledTypes.has(t)} onClick={() => setEnabledTypes(toggle(enabledTypes, t))}>
-                            {t}
-                        </ToggleChip>
-                    ))}
-                </ChipGroup>
+                {availableTypes.length > 0 && (
+                    <ChipGroup title="공급유형">
+                        {availableTypes.map(t => (
+                            <ToggleChip key={t} active={!disabledTypes.has(t)} onClick={() => setDisabledTypes(toggle(disabledTypes, t))}>
+                                {t}
+                            </ToggleChip>
+                        ))}
+                    </ChipGroup>
+                )}
             </div>
 
             {!loading && data && totalShown === 0 && !apiKeyMissing && <EmptyNotice />}
@@ -385,10 +395,17 @@ const LhCard = ({ item }: { item: LhNoticeItem }) => {
                 </div>
             )}
 
-            {(item.rcptBegin || item.rcptEnd) && (
+            {item.noticeDate && (
+                <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                    <Calendar size={14} className="text-slate-400" />
+                    <span>공고일 {fmtDate(item.noticeDate)}</span>
+                </div>
+            )}
+
+            {item.rcptEnd && (
                 <div className="flex items-center gap-1.5 text-sm">
                     <Calendar size={14} className="text-slate-400" />
-                    <span className="text-slate-700">{fmtDate(item.rcptBegin)} ~ {fmtDate(item.rcptEnd)}</span>
+                    <span className="text-slate-700">마감 {fmtDate(item.rcptEnd)}</span>
                     {daysLeft !== null && daysLeft >= 0 && (
                         <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-bold ${daysLeft <= 1 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                             D-{daysLeft}
@@ -436,12 +453,9 @@ function filterByRegion<T>(items: T[], enabled: Set<string>, textOf: (it: T) => 
     });
 }
 
-function filterByType(items: LhNoticeItem[], enabled: Set<string>): LhNoticeItem[] {
-    if (enabled.size === LH_TYPE_OPTIONS.length) return items;
-    return items.filter(it => {
-        const type = it.supplyTypeName ?? '';
-        return LH_TYPE_OPTIONS.some(t => enabled.has(t) && type.includes(t));
-    });
+function filterByType(items: LhNoticeItem[], disabled: Set<string>): LhNoticeItem[] {
+    if (disabled.size === 0) return items;
+    return items.filter(it => !disabled.has(it.supplyTypeName ?? ''));
 }
 
 function pickStageDates(item: SubscriptionItem, stage: SubscriptionRank): { begin: string | null; end: string | null } {

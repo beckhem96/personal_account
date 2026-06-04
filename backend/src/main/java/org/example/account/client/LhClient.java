@@ -16,19 +16,23 @@ import java.util.List;
 
 /**
  * 한국토지주택공사_분양임대공고문 조회 서비스 (data.go.kr B552555/lhLeaseNoticeInfo1).
- * 분양(UPP_AIS_TP_CD=05) / 임대(06) 공고 목록을 가져온다.
  *
- * <p>주의: data.go.kr API는 키마다 개별 활용신청이 필요하다. 미신청 키로 호출하면
- * 본문에 "Forbidden"(HTTP 403)이 내려온다. 이 경우 빈 목록으로 처리하고 경고만 남긴다.
+ * <p>공고유형코드(UPP_AIS_TP_CD): 05 분양주택 / 06 임대주택 / 39 신혼희망타운 (그 외 01 토지 등은 제외).
+ * 지역코드(CNP_CD): 11 서울특별시 / 41 경기도.
+ *
+ * <p>응답 구조: {@code [ {dsSch:[...]}, {resHeader:[...], dsList:[...]} ]}. dsList가 공고 행 배열.
+ *
+ * <p>주의: data.go.kr API는 키마다 개별 활용신청이 필요하고, 해외 IP는 지역 차단(403)될 수 있다.
+ * 호출 실패는 빈 목록으로 흡수한다.
  */
 @Slf4j
 @Component
 public class LhClient {
 
-    /** 분양 상위유형코드 */
-    private static final String UPP_SALE = "05";
-    /** 임대 상위유형코드 */
-    private static final String UPP_RENT = "06";
+    /** 조회 대상 상위 공고유형코드 — 분양주택 / 임대주택 / 신혼희망타운 */
+    private static final List<String> TOP_TYPE_CODES = List.of("05", "06", "39");
+    /** 조회 대상 지역코드 — 서울 / 경기 (경기 시군구는 서비스 단에서 공고명으로 추가 필터) */
+    private static final List<String> REGION_CODES = List.of("11", "41");
     private static final int PAGE_SIZE = 100;
 
     private final RestClient restClient;
@@ -49,27 +53,28 @@ public class LhClient {
         return apiKey != null && !apiKey.isBlank();
     }
 
-    /** 분양 공고 목록 */
-    public List<JsonNode> fetchSaleNotices() {
-        return fetch(UPP_SALE);
-    }
-
-    /** 임대 공고 목록 */
-    public List<JsonNode> fetchRentNotices() {
-        return fetch(UPP_RENT);
-    }
-
-    private List<JsonNode> fetch(String uppAisTpCd) {
+    /** 분양주택·임대주택·신혼희망타운 × 서울·경기 공고 행을 모두 모아 반환한다. */
+    public List<JsonNode> fetchAll() {
         if (!isAvailable()) {
             return Collections.emptyList();
         }
+        List<JsonNode> all = new ArrayList<>();
+        for (String top : TOP_TYPE_CODES) {
+            for (String region : REGION_CODES) {
+                all.addAll(fetchOne(top, region));
+            }
+        }
+        return all;
+    }
 
+    private List<JsonNode> fetchOne(String uppAisTpCd, String cnpCd) {
         // Spring RestClient의 queryParam은 `+`/`/`/`=` reserved 문자를 인코딩하지 않아
-        // data.go.kr 인증키가 깨진다(=등록되지 않은 인증키). URI를 직접 인코딩해 raw로 전달.
+        // data.go.kr 인증키가 깨진다. URI를 직접 인코딩해 raw로 전달.
         String query = "serviceKey=" + URLEncoder.encode(apiKey, StandardCharsets.UTF_8)
                 + "&PG_SZ=" + PAGE_SIZE
                 + "&PAGE=1"
-                + "&UPP_AIS_TP_CD=" + uppAisTpCd;
+                + "&UPP_AIS_TP_CD=" + uppAisTpCd
+                + "&CNP_CD=" + cnpCd;
         URI uri = URI.create(baseUrl + "/lhLeaseNoticeInfo1?" + query);
 
         try {
@@ -80,33 +85,25 @@ public class LhClient {
             if (response == null) {
                 return Collections.emptyList();
             }
-            return extractRows(response);
+            List<JsonNode> rows = new ArrayList<>();
+            collectNoticeRows(response, rows);
+            return rows;
         } catch (Exception e) {
-            // 활용신청 미완료(Forbidden)·일시 장애 등은 빈 목록으로 흡수
-            log.warn("LH 공고 API 호출 실패 uppAisTpCd={} : {}", uppAisTpCd, e.getMessage());
+            log.warn("LH 공고 API 호출 실패 UPP_AIS_TP_CD={} CNP_CD={} : {}", uppAisTpCd, cnpCd, e.getMessage());
             return Collections.emptyList();
         }
     }
 
     /**
-     * LH B552555 응답은 보통 {@code [ {resHeader:[...]}, {dsList:[...]} ]} 형태다.
-     * 구조가 유동적이라, PAN_NM/PAN_ID를 가진 객체 배열을 트리에서 찾아 행 목록으로 반환한다.
+     * 응답 트리에서 PAN_NM/PAN_ID를 가진 객체 배열(=dsList)을 찾아 행으로 수집한다.
+     * resHeader([SS_CODE..])·dsSch([PAGE..])는 해당 필드가 없어 자연히 걸러진다.
      */
-    private List<JsonNode> extractRows(JsonNode root) {
-        List<JsonNode> rows = new ArrayList<>();
-        collectNoticeRows(root, rows);
-        return rows;
-    }
-
     private void collectNoticeRows(JsonNode node, List<JsonNode> out) {
         if (node == null) {
             return;
         }
         if (node.isArray()) {
-            boolean isNoticeRowArray = node.size() > 0
-                    && node.get(0).isObject()
-                    && looksLikeNotice(node.get(0));
-            if (isNoticeRowArray) {
+            if (node.size() > 0 && node.get(0).isObject() && looksLikeNotice(node.get(0))) {
                 node.forEach(out::add);
                 return;
             }
