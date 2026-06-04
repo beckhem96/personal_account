@@ -17,7 +17,8 @@ import type {
     LoanRepaymentRequest, LoanRepaymentResponse,
     LoanProductInfo,
     ApartmentDealsResponse, RegionTree,
-    SupportedCardCompany, StatementImportResponse
+    SupportedCardCompany, StatementImportResponse,
+    SubscriptionsResponse
 } from '../types';
 
 // Categories
@@ -282,5 +283,11 @@ export const getApartmentDeals = async (params: {
     minArea?: number;
 }) => {
     const response = await api.get<ApartmentDealsResponse>('/housing/apartment-deals', { params });
+    return response.data;
+};
+
+// Subscriptions (청약 일정)
+export const getTodaySubscriptions = async () => {
+    const response = await api.get<SubscriptionsResponse>('/subscriptions/today');
     return response.data;
 };

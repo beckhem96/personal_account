@@ -15,6 +15,7 @@ import Investment from './pages/Investment';
 import StockAnalysis from './pages/StockAnalysis';
 import Housing from './pages/Housing';
 import Statements from './pages/Statements';
+import Subscriptions from './pages/Subscriptions';
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
           <Route path="/stocks" element={<StockAnalysis />} />
           <Route path="/housing" element={<Housing />} />
           <Route path="/statements" element={<Statements />} />
+          <Route path="/subscriptions" element={<Subscriptions />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
       </Layout>

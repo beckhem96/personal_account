@@ -309,3 +309,32 @@ export interface RegionTree {
     regionLabel: string;
     districts: RegionDistrict[];
 }
+
+// Subscriptions (청약 일정)
+export type SubscriptionRank = 'FIRST' | 'SECOND' | 'REMAINDER';
+
+export interface SubscriptionItem {
+    houseManageNo: string | null;
+    name: string;
+    houseType: string | null;
+    regionLabel: string | null;
+    address: string | null;
+    totalSupplyHouseholds: number | null;
+    noticeDate: string | null;
+    firstRcptBegin: string | null;
+    firstRcptEnd: string | null;
+    secondRcptBegin: string | null;
+    secondRcptEnd: string | null;
+    remainderRcptBegin: string | null;
+    remainderRcptEnd: string | null;
+    activeStages: SubscriptionRank[];
+    applyhomeUrl: string | null;
+}
+
+export interface SubscriptionsResponse {
+    asOf: string;
+    apiKeyConfigured: boolean;
+    firstRank: SubscriptionItem[];
+    secondRank: SubscriptionItem[];
+    remainder: SubscriptionItem[];
+}

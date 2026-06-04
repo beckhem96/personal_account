@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wallet, CreditCard, Calculator, Menu, X, LogOut, User, Settings, TrendingUp, BarChart3, Home, Upload } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Calculator, Menu, X, LogOut, User, Settings, TrendingUp, BarChart3, Home, Upload, Bell } from 'lucide-react';
 import { cn } from '../utils';
 
 interface LayoutProps {
@@ -36,6 +36,7 @@ const Layout = ({ children }: LayoutProps) => {
     { to: '/stocks', icon: BarChart3, label: 'US Stocks' },
     { to: '/housing', icon: Home, label: 'Housing' },
     { to: '/statements', icon: Upload, label: '명세서 가져오기' },
+    { to: '/subscriptions', icon: Bell, label: '청약 일정' },
     { to: '/settings', icon: Settings, label: 'Settings' },
   ];
 
