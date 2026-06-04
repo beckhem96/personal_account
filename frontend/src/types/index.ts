@@ -361,3 +361,59 @@ export interface LhNoticesResponse {
     sale: LhNoticeItem[];
     rent: LhNoticeItem[];
 }
+
+// Stocks (내 주식 / 분석 / 시장 전망) — 백엔드 MyStock 관련 DTO 대응
+export interface MyStock {
+    id: number;
+    ticker: string;
+    companyName: string;
+    purchasePrice: number;
+    quantity: number;
+    currentPrice: number | null;
+    valuation: number | null;
+    returnRate: number | null;
+    lastSyncedAt: string | null;
+}
+
+export interface MyStockRequest {
+    ticker: string;
+    companyName: string;
+    purchasePrice: number;
+    quantity: number;
+}
+
+export interface SymbolSearchResult {
+    symbol: string;
+    name: string;
+    type: string;
+    region: string;
+    currency: string;
+}
+
+export interface StockNewsItem {
+    title: string;
+    url: string;
+    summary: string;
+    sentiment: string;
+}
+
+export interface StockAnalysis {
+    ticker: string;
+    report: string;
+    indicators: Record<string, string>;
+    news: StockNewsItem[];
+}
+
+export interface RssArticle {
+    title: string;
+    description: string;
+    link: string;
+    pubDate: string;
+    category: string;
+}
+
+export interface MarketOutlookResponse {
+    report: string;
+    generatedAt: string;
+    sources: RssArticle[];
+}
