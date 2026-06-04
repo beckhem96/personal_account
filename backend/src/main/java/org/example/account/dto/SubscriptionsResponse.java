@@ -6,6 +6,7 @@ import java.util.List;
 public record SubscriptionsResponse(
         LocalDate asOf,
         boolean apiKeyConfigured,
+        List<SubscriptionItem> special,
         List<SubscriptionItem> firstRank,
         List<SubscriptionItem> secondRank,
         List<SubscriptionItem> remainder

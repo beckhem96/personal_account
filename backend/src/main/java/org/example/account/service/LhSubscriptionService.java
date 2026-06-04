@@ -27,7 +27,7 @@ import java.util.Set;
 public class LhSubscriptionService {
 
     static final String SEOUL_LABEL = "서울";
-    static final Set<String> TARGET_DISTRICTS = Set.of("의정부", "남양주", "하남", "구리");
+    static final Set<String> TARGET_DISTRICTS = Set.of("의정부", "남양주", "하남", "구리", "용인", "수원", "김포");
 
     /** 임대(06) 공고 중 노출할 세부유형(AIS_TP_CD_NM 부분일치). 매입임대·전세임대·장기전세 등은 제외. */
     static final Set<String> RENT_ALLOWED_TYPES = Set.of("행복주택", "국민임대", "영구임대");

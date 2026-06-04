@@ -311,7 +311,7 @@ export interface RegionTree {
 }
 
 // Subscriptions (청약 일정)
-export type SubscriptionRank = 'FIRST' | 'SECOND' | 'REMAINDER';
+export type SubscriptionRank = 'SPECIAL' | 'FIRST' | 'SECOND' | 'REMAINDER';
 
 export interface SubscriptionItem {
     houseManageNo: string | null;
@@ -321,6 +321,8 @@ export interface SubscriptionItem {
     address: string | null;
     totalSupplyHouseholds: number | null;
     noticeDate: string | null;
+    specialRcptBegin: string | null;
+    specialRcptEnd: string | null;
     firstRcptBegin: string | null;
     firstRcptEnd: string | null;
     secondRcptBegin: string | null;
@@ -334,6 +336,7 @@ export interface SubscriptionItem {
 export interface SubscriptionsResponse {
     asOf: string;
     apiKeyConfigured: boolean;
+    special: SubscriptionItem[];
     firstRank: SubscriptionItem[];
     secondRank: SubscriptionItem[];
     remainder: SubscriptionItem[];

@@ -14,15 +14,20 @@ const REGION_OPTIONS: Array<{ key: string; label: string; token: string }> = [
     { key: 'NAMYANGJU', label: '남양주', token: '남양주' },
     { key: 'HANAM', label: '하남', token: '하남' },
     { key: 'GURI', label: '구리', token: '구리' },
+    { key: 'YONGIN', label: '용인', token: '용인' },
+    { key: 'SUWON', label: '수원', token: '수원' },
+    { key: 'GIMPO', label: '김포', token: '김포' },
 ];
 
 const RANK_LABEL: Record<SubscriptionRank, string> = {
+    SPECIAL: '특별공급',
     FIRST: '1순위',
     SECOND: '2순위',
     REMAINDER: '무순위',
 };
 
 const RANK_COLOR: Record<SubscriptionRank, string> = {
+    SPECIAL: 'bg-rose-100 text-rose-800 border-rose-200',
     FIRST: 'bg-blue-100 text-blue-800 border-blue-200',
     SECOND: 'bg-indigo-100 text-indigo-800 border-indigo-200',
     REMAINDER: 'bg-amber-100 text-amber-800 border-amber-200',
@@ -76,7 +81,7 @@ const ApplyhomeView = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set(REGION_OPTIONS.map(r => r.key)));
-    const [enabledRanks, setEnabledRanks] = useState<Set<SubscriptionRank>>(new Set(['FIRST', 'SECOND', 'REMAINDER']));
+    const [enabledRanks, setEnabledRanks] = useState<Set<SubscriptionRank>>(new Set(['SPECIAL', 'FIRST', 'SECOND', 'REMAINDER']));
     const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
     const fetchData = async () => {
@@ -95,11 +100,13 @@ const ApplyhomeView = () => {
 
     useEffect(() => { fetchData(); }, []);
 
+    const filteredSpecial = useMemo(() => filterByRegion(data?.special ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
     const filteredFirst = useMemo(() => filterByRegion(data?.firstRank ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
     const filteredSecond = useMemo(() => filterByRegion(data?.secondRank ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
     const filteredRemainder = useMemo(() => filterByRegion(data?.remainder ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
 
     const sections: Array<{ rank: SubscriptionRank; items: SubscriptionItem[] }> = ([
+        { rank: 'SPECIAL' as SubscriptionRank, items: filteredSpecial },
         { rank: 'FIRST' as SubscriptionRank, items: filteredFirst },
         { rank: 'SECOND' as SubscriptionRank, items: filteredSecond },
         { rank: 'REMAINDER' as SubscriptionRank, items: filteredRemainder },
@@ -129,7 +136,7 @@ const ApplyhomeView = () => {
                     ))}
                 </ChipGroup>
                 <ChipGroup title="순위">
-                    {(['FIRST', 'SECOND', 'REMAINDER'] as SubscriptionRank[]).map(r => (
+                    {(['SPECIAL', 'FIRST', 'SECOND', 'REMAINDER'] as SubscriptionRank[]).map(r => (
                         <ToggleChip key={r} active={enabledRanks.has(r)} onClick={() => setEnabledRanks(toggle(enabledRanks, r))}>
                             {RANK_LABEL[r]}
                         </ToggleChip>
@@ -476,6 +483,7 @@ function filterByType(items: LhNoticeItem[], disabled: Set<string>): LhNoticeIte
 
 function pickStageDates(item: SubscriptionItem, stage: SubscriptionRank): { begin: string | null; end: string | null } {
     switch (stage) {
+        case 'SPECIAL': return { begin: item.specialRcptBegin, end: item.specialRcptEnd };
         case 'FIRST': return { begin: item.firstRcptBegin, end: item.firstRcptEnd };
         case 'SECOND': return { begin: item.secondRcptBegin, end: item.secondRcptEnd };
         case 'REMAINDER': return { begin: item.remainderRcptBegin, end: item.remainderRcptEnd };

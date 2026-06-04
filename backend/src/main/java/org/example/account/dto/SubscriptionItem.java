@@ -13,6 +13,8 @@ public record SubscriptionItem(
         String address,           // 공급위치
         Integer totalSupplyHouseholds,
         LocalDate noticeDate,
+        LocalDate specialRcptBegin,
+        LocalDate specialRcptEnd,
         LocalDate firstRcptBegin,
         LocalDate firstRcptEnd,
         LocalDate secondRcptBegin,

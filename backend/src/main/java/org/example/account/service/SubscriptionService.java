@@ -21,8 +21,8 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class SubscriptionService {
 
-    /** 사용자 지정 5개 지역 — 서울 전역 + 경기 4개 시군구 */
-    static final Set<String> TARGET_DISTRICTS = Set.of("의정부", "남양주", "하남", "구리");
+    /** 사용자 지정 지역 — 서울 전역 + 경기 시군구 */
+    static final Set<String> TARGET_DISTRICTS = Set.of("의정부", "남양주", "하남", "구리", "용인", "수원", "김포");
     private static final String SEOUL_LABEL = "서울";
     private static final String APPLYHOME_DETAIL_URL = "https://www.applyhome.co.kr/ai/aia/selectAPTLttotPblancDetail.do?houseManageNo=";
 
@@ -37,7 +37,7 @@ public class SubscriptionService {
     public SubscriptionsResponse findActiveToday() {
         LocalDate today = LocalDate.now();
         if (!client.isAvailable()) {
-            return new SubscriptionsResponse(today, false, List.of(), List.of(), List.of());
+            return new SubscriptionsResponse(today, false, List.of(), List.of(), List.of(), List.of());
         }
 
         List<SubscriptionItem> items = new ArrayList<>();
@@ -57,6 +57,7 @@ public class SubscriptionService {
         return new SubscriptionsResponse(
                 today,
                 true,
+                filterByStage(items, SubscriptionRank.SPECIAL),
                 filterByStage(items, SubscriptionRank.FIRST),
                 filterByStage(items, SubscriptionRank.SECOND),
                 filterByStage(items, SubscriptionRank.REMAINDER)
@@ -82,12 +83,15 @@ public class SubscriptionService {
         if (name == null) return null;
 
         // 카드 표시용: 해당지역(CRSPAREA) 우선. 비어 있으면 다음 영역 폴백.
+        LocalDate specialBegin = date(raw, "SPSPLY_RCEPT_BGNDE");
+        LocalDate specialEnd = date(raw, "SPSPLY_RCEPT_ENDDE");
         LocalDate firstBegin = firstNonNullDate(raw, "GNRL_RNK1_CRSPAREA_RCPTDE", "GNRL_RNK1_ETC_GG_RCPTDE", "GNRL_RNK1_ETC_AREA_RCPTDE", "RCEPT_BGNDE");
         LocalDate firstEnd = firstNonNullDate(raw, "GNRL_RNK1_CRSPAREA_ENDDE", "GNRL_RNK1_ETC_GG_ENDDE", "GNRL_RNK1_ETC_AREA_ENDDE", "RCEPT_ENDDE");
         LocalDate secondBegin = firstNonNullDate(raw, "GNRL_RNK2_CRSPAREA_RCPTDE", "GNRL_RNK2_ETC_GG_RCPTDE", "GNRL_RNK2_ETC_AREA_RCPTDE");
         LocalDate secondEnd = firstNonNullDate(raw, "GNRL_RNK2_CRSPAREA_ENDDE", "GNRL_RNK2_ETC_GG_ENDDE", "GNRL_RNK2_ETC_AREA_ENDDE");
 
         List<SubscriptionRank> active = new ArrayList<>();
+        if (isOpenOrUpcoming(today, specialBegin, specialEnd)) active.add(SubscriptionRank.SPECIAL);
         if (anyRangeOpenOrUpcoming(raw, today, RNK1_RANGES)) active.add(SubscriptionRank.FIRST);
         if (anyRangeOpenOrUpcoming(raw, today, RNK2_RANGES)) active.add(SubscriptionRank.SECOND);
 
@@ -99,6 +103,7 @@ public class SubscriptionService {
                 text(raw, "HSSPLY_ADRES"),
                 integer(raw, "TOT_SUPLY_HSHLDCO"),
                 date(raw, "RCRIT_PBLANC_DE"),
+                specialBegin, specialEnd,
                 firstBegin, firstEnd,
                 secondBegin, secondEnd,
                 null, null,
@@ -143,6 +148,7 @@ public class SubscriptionService {
                 text(raw, "HSSPLY_ADRES"),
                 integer(raw, "TOT_SUPLY_HSHLDCO"),
                 date(raw, "RCRIT_PBLANC_DE"),
+                null, null,
                 null, null,
                 null, null,
                 begin, end,

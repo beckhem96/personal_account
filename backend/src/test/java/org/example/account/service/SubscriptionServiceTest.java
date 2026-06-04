@@ -42,16 +42,22 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void 지역_필터_서울과_경기_5개시군구만_통과() {
+    void 지역_필터_서울과_지정_경기시군구만_통과() {
         SubscriptionItem seoul = item("서울단지", "서울특별시", "서울특별시 강남구", List.of(SubscriptionRank.FIRST));
         SubscriptionItem namyangju = item("남양주단지", "경기", "경기도 남양주시 별내동", List.of(SubscriptionRank.FIRST));
-        SubscriptionItem busan = item("부산단지", "부산광역시", "부산광역시 해운대구", List.of(SubscriptionRank.FIRST));
         SubscriptionItem suwon = item("수원단지", "경기", "경기도 수원시 영통구", List.of(SubscriptionRank.FIRST));
+        SubscriptionItem yongin = item("용인단지", "경기", "경기도 용인시 기흥구", List.of(SubscriptionRank.FIRST));
+        SubscriptionItem gimpo = item("김포단지", "경기", "경기도 김포시 장기동", List.of(SubscriptionRank.FIRST));
+        SubscriptionItem busan = item("부산단지", "부산광역시", "부산광역시 해운대구", List.of(SubscriptionRank.FIRST));
+        SubscriptionItem goyang = item("고양단지", "경기", "경기도 고양시 일산동구", List.of(SubscriptionRank.FIRST));
 
         assertThat(service.matchesTargetRegion(seoul)).isTrue();
         assertThat(service.matchesTargetRegion(namyangju)).isTrue();
+        assertThat(service.matchesTargetRegion(suwon)).isTrue();
+        assertThat(service.matchesTargetRegion(yongin)).isTrue();
+        assertThat(service.matchesTargetRegion(gimpo)).isTrue();
         assertThat(service.matchesTargetRegion(busan)).isFalse();
-        assertThat(service.matchesTargetRegion(suwon)).isFalse();
+        assertThat(service.matchesTargetRegion(goyang)).isFalse();
     }
 
     @Test
@@ -106,6 +112,21 @@ class SubscriptionServiceTest {
     }
 
     @Test
+    void 특별공급_접수기간이면_SPECIAL_활성() {
+        LocalDate today = LocalDate.of(2026, 6, 1);
+        ObjectNode raw = mapper.createObjectNode();
+        raw.put("HOUSE_NM", "특공단지");
+        raw.put("HSSPLY_ADRES", "경기도 용인시 처인구");
+        raw.put("SPSPLY_RCEPT_BGNDE", "2026-05-30");
+        raw.put("SPSPLY_RCEPT_ENDDE", "2026-06-03");
+
+        SubscriptionItem item = service.toItemFromApt(raw, today);
+
+        assertThat(item.activeStages()).containsExactly(SubscriptionRank.SPECIAL);
+        assertThat(service.matchesTargetRegion(item)).isTrue(); // 용인 지역 통과
+    }
+
+    @Test
     void 접수_시작_전_예정_공고도_단계_활성() {
         LocalDate today = LocalDate.of(2026, 6, 1);
         ObjectNode raw = mapper.createObjectNode();
@@ -153,6 +174,6 @@ class SubscriptionServiceTest {
 
     private SubscriptionItem item(String name, String region, String addr, List<SubscriptionRank> active) {
         return new SubscriptionItem(null, name, "민영", region, addr, null, null,
-                null, null, null, null, null, null, active, null);
+                null, null, null, null, null, null, null, null, active, null);
     }
 }
