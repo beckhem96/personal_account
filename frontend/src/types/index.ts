@@ -199,6 +199,52 @@ export interface YearEndSettlementResponse {
     guideMessage: string;
 }
 
+// 연말정산 정밀 계산 (결정세액·환급액)
+export interface YearEndFullRequest {
+    totalSalary: number;
+    creditCardAmount: number;
+    debitCashAmount: number;
+    traditionalMarketAmount: number;
+    publicTransportAmount: number;
+    dependents: number;
+    seniors: number;
+    disabled: number;
+    nationalPension: number;
+    healthInsurance: number;
+    employmentInsurance: number;
+    insurancePremium: number;
+    medicalExpense: number;
+    educationExpense: number;
+    donation: number;
+    pensionSavings: number;
+    prepaidTax: number;
+}
+
+export interface YearEndFullResponse {
+    grossSalary: number;
+    earnedIncomeDeduction: number;
+    earnedIncome: number;
+    personalDeduction: number;
+    pensionInsuranceDeduction: number;
+    specialIncomeDeduction: number;
+    cardDeduction: number;
+    totalIncomeDeduction: number;
+    taxBase: number;
+    calculatedTax: number;
+    earnedIncomeTaxCredit: number;
+    insuranceCredit: number;
+    medicalCredit: number;
+    educationCredit: number;
+    donationCredit: number;
+    pensionAccountCredit: number;
+    totalTaxCredit: number;
+    determinedTax: number;
+    localIncomeTax: number;
+    prepaidTax: number;
+    refundOrPay: number;
+    guideMessage: string;
+}
+
 // Aliases for API responses (same as entity types)
 export type CategoryResponse = Category;
 export type BudgetResponse = Budget;

@@ -9,6 +9,8 @@ import org.example.account.domain.TransactionType;
 import org.example.account.domain.YearEndCategory;
 import org.example.account.dto.TaxStockRequest;
 import org.example.account.dto.TaxStockResponse;
+import org.example.account.dto.YearEndFullRequest;
+import org.example.account.dto.YearEndFullResponse;
 import org.example.account.dto.YearEndSettlementRequest;
 import org.example.account.dto.YearEndSettlementResponse;
 import org.example.account.repository.TransactionRepository;
@@ -121,6 +123,174 @@ public class TaxService {
         return new YearEndSettlementResponse(minThreshold,
                 creditFinal, debitFinal, marketDed, transportDed,
                 general, totalDed, guide);
+    }
+
+    // ── 연말정산 정밀 계산 (결정세액·환급액) ──────────────────────────────
+    private static final BigDecimal MEDICAL_FLOOR_RATIO = new BigDecimal("0.03"); // 의료비 최저사용 3%
+    private static final BigDecimal BASIC_PERSON = new BigDecimal("1500000"); // 기본공제 1인 150만
+    private static final BigDecimal SENIOR_ADD = new BigDecimal("1000000");   // 경로우대 100만
+    private static final BigDecimal DISABLED_ADD = new BigDecimal("2000000"); // 장애인 200만
+    private static final BigDecimal INSURANCE_CAP = new BigDecimal("1000000"); // 보장성보험 100만 한도
+    private static final BigDecimal INSURANCE_RATE = new BigDecimal("0.12");   // 보장성보험 12%
+    private static final BigDecimal PENSION_CAP = new BigDecimal("9000000");   // 연금계좌 900만 한도
+    private static final BigDecimal DONATION_BOUND = new BigDecimal("10000000"); // 기부금 1천만 경계
+    private static final BigDecimal LOCAL_TAX_RATE = new BigDecimal("0.10");   // 지방소득세 10%
+
+    public YearEndFullResponse calculateYearEndFull(YearEndFullRequest r) {
+        BigDecimal salary = nz(r.totalSalary());
+
+        // 1단계: 근로소득금액
+        BigDecimal earnedIncomeDeduction = earnedIncomeDeduction(salary);
+        BigDecimal earnedIncome = salary.subtract(earnedIncomeDeduction).max(BigDecimal.ZERO);
+
+        // 2단계: 종합소득공제 → 과세표준
+        BigDecimal personalDed = BASIC_PERSON.multiply(BigDecimal.valueOf(1L + nzInt(r.dependents())))
+                .add(SENIOR_ADD.multiply(BigDecimal.valueOf(nzInt(r.seniors()))))
+                .add(DISABLED_ADD.multiply(BigDecimal.valueOf(nzInt(r.disabled()))));
+        BigDecimal pensionInsuranceDed = nz(r.nationalPension());
+        BigDecimal specialIncomeDed = nz(r.healthInsurance()).add(nz(r.employmentInsurance()));
+        BigDecimal cardDed = simulateYearEndSettlement(new YearEndSettlementRequest(
+                salary, r.creditCardAmount(), r.debitCashAmount(),
+                r.traditionalMarketAmount(), r.publicTransportAmount())).totalDeduction();
+
+        BigDecimal totalIncomeDed = personalDed.add(pensionInsuranceDed).add(specialIncomeDed).add(cardDed);
+        BigDecimal taxBase = earnedIncome.subtract(totalIncomeDed).max(BigDecimal.ZERO);
+
+        // 3단계: 산출세액 (기본세율 누진)
+        BigDecimal calculatedTax = progressiveTax(taxBase);
+
+        // 4단계: 세액공제 → 결정세액
+        BigDecimal earnedCredit = earnedIncomeTaxCredit(calculatedTax, salary);
+        BigDecimal insuranceCredit = nz(r.insurancePremium()).min(INSURANCE_CAP)
+                .multiply(INSURANCE_RATE).setScale(0, RoundingMode.FLOOR);
+        BigDecimal medicalBase = nz(r.medicalExpense())
+                .subtract(salary.multiply(MEDICAL_FLOOR_RATIO)).max(BigDecimal.ZERO);
+        BigDecimal medicalCredit = medicalBase.multiply(RATE_CREDIT).setScale(0, RoundingMode.FLOOR);
+        BigDecimal educationCredit = nz(r.educationExpense()).multiply(RATE_CREDIT).setScale(0, RoundingMode.FLOOR);
+        BigDecimal donationCredit = donationCredit(nz(r.donation()));
+        BigDecimal pensionAccountCredit = pensionAccountCredit(nz(r.pensionSavings()), salary);
+
+        BigDecimal totalCredit = earnedCredit.add(insuranceCredit).add(medicalCredit)
+                .add(educationCredit).add(donationCredit).add(pensionAccountCredit);
+
+        BigDecimal determinedTax = calculatedTax.subtract(totalCredit).max(BigDecimal.ZERO);
+        BigDecimal localTax = determinedTax.multiply(LOCAL_TAX_RATE).setScale(0, RoundingMode.FLOOR);
+
+        // 5단계: 정산 (소득세 기준)
+        BigDecimal prepaid = nz(r.prepaidTax());
+        BigDecimal refundOrPay = prepaid.subtract(determinedTax);
+
+        return new YearEndFullResponse(
+                salary, earnedIncomeDeduction, earnedIncome,
+                personalDed, pensionInsuranceDed, specialIncomeDed, cardDed, totalIncomeDed, taxBase,
+                calculatedTax,
+                earnedCredit, insuranceCredit, medicalCredit, educationCredit, donationCredit, pensionAccountCredit,
+                totalCredit, determinedTax, localTax,
+                prepaid, refundOrPay, buildFullGuide(determinedTax, refundOrPay)
+        );
+    }
+
+    /** 근로소득공제 (총급여 구간별 누진, 한도 2천만원). */
+    static BigDecimal earnedIncomeDeduction(BigDecimal s) {
+        BigDecimal d;
+        if (s.compareTo(bd(5_000_000)) <= 0) {
+            d = s.multiply(new BigDecimal("0.70"));
+        } else if (s.compareTo(bd(15_000_000)) <= 0) {
+            d = bd(3_500_000).add(s.subtract(bd(5_000_000)).multiply(new BigDecimal("0.40")));
+        } else if (s.compareTo(bd(45_000_000)) <= 0) {
+            d = bd(7_500_000).add(s.subtract(bd(15_000_000)).multiply(new BigDecimal("0.15")));
+        } else if (s.compareTo(bd(100_000_000)) <= 0) {
+            d = bd(12_000_000).add(s.subtract(bd(45_000_000)).multiply(new BigDecimal("0.05")));
+        } else {
+            d = bd(14_750_000).add(s.subtract(bd(100_000_000)).multiply(new BigDecimal("0.02")));
+        }
+        return d.min(bd(20_000_000)).setScale(0, RoundingMode.FLOOR);
+    }
+
+    /** 종합소득 기본세율 (누진공제 방식, 2023년~). */
+    static BigDecimal progressiveTax(BigDecimal base) {
+        BigDecimal tax;
+        if (base.compareTo(bd(14_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.06"));
+        } else if (base.compareTo(bd(50_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.15")).subtract(bd(1_260_000));
+        } else if (base.compareTo(bd(88_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.24")).subtract(bd(5_760_000));
+        } else if (base.compareTo(bd(150_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.35")).subtract(bd(15_440_000));
+        } else if (base.compareTo(bd(300_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.38")).subtract(bd(19_940_000));
+        } else if (base.compareTo(bd(500_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.40")).subtract(bd(25_940_000));
+        } else if (base.compareTo(bd(1_000_000_000)) <= 0) {
+            tax = base.multiply(new BigDecimal("0.42")).subtract(bd(35_940_000));
+        } else {
+            tax = base.multiply(new BigDecimal("0.45")).subtract(bd(65_940_000));
+        }
+        return tax.max(BigDecimal.ZERO).setScale(0, RoundingMode.FLOOR);
+    }
+
+    /** 근로소득세액공제 — 산출세액 130만 이하 55%/초과 30%, 총급여별 한도. */
+    static BigDecimal earnedIncomeTaxCredit(BigDecimal calculatedTax, BigDecimal salary) {
+        BigDecimal boundary = bd(1_300_000);
+        BigDecimal credit = calculatedTax.compareTo(boundary) <= 0
+                ? calculatedTax.multiply(new BigDecimal("0.55"))
+                : bd(715_000).add(calculatedTax.subtract(boundary).multiply(new BigDecimal("0.30")));
+
+        BigDecimal limit;
+        if (salary.compareTo(bd(33_000_000)) <= 0) {
+            limit = bd(740_000);
+        } else if (salary.compareTo(bd(70_000_000)) <= 0) {
+            limit = bd(740_000).subtract(salary.subtract(bd(33_000_000)).multiply(new BigDecimal("0.008")))
+                    .max(bd(660_000));
+        } else if (salary.compareTo(bd(120_000_000)) <= 0) {
+            limit = bd(660_000).subtract(salary.subtract(bd(70_000_000)).multiply(new BigDecimal("0.5")))
+                    .max(bd(500_000));
+        } else {
+            limit = bd(500_000).subtract(salary.subtract(bd(120_000_000)).multiply(new BigDecimal("0.5")))
+                    .max(bd(200_000));
+        }
+        return credit.min(limit).setScale(0, RoundingMode.FLOOR);
+    }
+
+    /** 기부금 세액공제 — 1천만원 이하 15%, 초과분 30%. */
+    static BigDecimal donationCredit(BigDecimal donation) {
+        BigDecimal credit = donation.compareTo(DONATION_BOUND) <= 0
+                ? donation.multiply(RATE_CREDIT)
+                : DONATION_BOUND.multiply(RATE_CREDIT)
+                        .add(donation.subtract(DONATION_BOUND).multiply(new BigDecimal("0.30")));
+        return credit.setScale(0, RoundingMode.FLOOR);
+    }
+
+    /** 연금계좌 세액공제 — 900만 한도, 총급여 5500만 이하 15%/초과 12%. */
+    static BigDecimal pensionAccountCredit(BigDecimal pensionSavings, BigDecimal salary) {
+        BigDecimal base = pensionSavings.min(PENSION_CAP);
+        BigDecimal rate = salary.compareTo(bd(55_000_000)) <= 0 ? RATE_CREDIT : new BigDecimal("0.12");
+        return base.multiply(rate).setScale(0, RoundingMode.FLOOR);
+    }
+
+    private String buildFullGuide(BigDecimal determinedTax, BigDecimal refundOrPay) {
+        StringBuilder sb = new StringBuilder();
+        if (refundOrPay.signum() >= 0) {
+            sb.append(String.format("예상 환급액은 약 %s원입니다. ", formatWon(refundOrPay)));
+        } else {
+            sb.append(String.format("예상 추가납부액은 약 %s원입니다. ", formatWon(refundOrPay.abs())));
+        }
+        if (determinedTax.signum() == 0) {
+            sb.append("결정세액이 0원이라 세액공제를 더 늘려도 환급이 늘지 않습니다.");
+        } else {
+            sb.append("연금저축·IRP(최대 900만원), 기부금 등 세액공제 항목을 늘리면 결정세액을 더 줄일 수 있습니다.");
+        }
+        sb.append(" ※ 자녀세액공제·월세·표준세액공제 등 일부 항목은 미반영된 간이 계산입니다.");
+        return sb.toString();
+    }
+
+    private static BigDecimal bd(long v) {
+        return BigDecimal.valueOf(v);
+    }
+
+    private int nzInt(Integer v) {
+        return v == null ? 0 : v;
     }
 
     private BigDecimal subtractThreshold(BigDecimal amount, BigDecimal remaining) {

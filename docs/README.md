@@ -13,6 +13,7 @@
 | 4 | [연말정산 내 거래 기반 자동 산출](./04-year-end-from-transactions.md) | 등록된 거래에서 5개 항목 자동 집계 + 카테고리 매핑 |
 | 5 | [청약 일정 조회](./05-subscription-listings.md) | 청약홈 API 연동, 수도권 5개 지역의 오늘 접수중 청약 표시 |
 | 6 | [LH 공공분양·임대 청약 조회](./06-lh-public-subscriptions.md) | LH 분양임대공고문 API 연동, 청약 페이지에 'LH 공공' 탭 추가 |
+| 7 | [연말정산 정밀 계산](./07-year-end-full-settlement.md) | 소득공제+세액공제 → 결정세액·환급액 산출 (Tax 새 탭) |
 
 ## 기술 스택 (전체)
 

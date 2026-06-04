@@ -7,6 +7,8 @@ import org.example.account.domain.PaymentMethod;
 import org.example.account.domain.Transaction;
 import org.example.account.domain.TransactionType;
 import org.example.account.domain.YearEndCategory;
+import org.example.account.dto.YearEndFullRequest;
+import org.example.account.dto.YearEndFullResponse;
 import org.example.account.dto.YearEndSettlementRequest;
 import org.example.account.repository.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,6 +109,61 @@ class TaxServiceTest {
         assertThat(req.debitCashAmount()).isEqualByComparingTo("0");
         assertThat(req.traditionalMarketAmount()).isEqualByComparingTo("0");
         assertThat(req.publicTransportAmount()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void 연말정산_정밀_총급여5천만_단계별_결정세액() {
+        // 총급여 5천만, 부양가족 없음, 국민연금 225만 / 건강 197만 / 고용 45만, 나머지 0
+        YearEndFullRequest req = new YearEndFullRequest(
+                bd(50_000_000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                0, 0, 0,
+                bd(2_250_000), bd(1_970_000), bd(450_000),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                BigDecimal.ZERO
+        );
+
+        YearEndFullResponse res = taxService.calculateYearEndFull(req);
+
+        assertThat(res.earnedIncomeDeduction()).isEqualByComparingTo("12250000");
+        assertThat(res.earnedIncome()).isEqualByComparingTo("37750000");
+        assertThat(res.personalDeduction()).isEqualByComparingTo("1500000");
+        assertThat(res.taxBase()).isEqualByComparingTo("31580000");
+        assertThat(res.calculatedTax()).isEqualByComparingTo("3477000");
+        assertThat(res.earnedIncomeTaxCredit()).isEqualByComparingTo("660000");
+        assertThat(res.determinedTax()).isEqualByComparingTo("2817000");
+        assertThat(res.localIncomeTax()).isEqualByComparingTo("281700");
+        assertThat(res.refundOrPay()).isEqualByComparingTo("-2817000"); // 기납부 0 → 전액 추가납부
+    }
+
+    @Test
+    void 연말정산_정밀_기납부세액_많으면_환급() {
+        YearEndFullRequest req = new YearEndFullRequest(
+                bd(50_000_000), BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                0, 0, 0,
+                bd(2_250_000), bd(1_970_000), bd(450_000),
+                BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO,
+                bd(6_000_000),               // 연금저축 600만
+                bd(4_000_000)                // 기납부 400만
+        );
+
+        YearEndFullResponse res = taxService.calculateYearEndFull(req);
+
+        // 연금계좌 세액공제: 총급여 5500만 이하 → 15%, 600만 × 15% = 90만
+        assertThat(res.pensionAccountCredit()).isEqualByComparingTo("900000");
+        // 결정세액 2,817,000 - 900,000 = 1,917,000, 기납부 400만 → 환급 2,083,000
+        assertThat(res.determinedTax()).isEqualByComparingTo("1917000");
+        assertThat(res.refundOrPay()).isEqualByComparingTo("2083000");
+    }
+
+    @Test
+    void 산출세액_누진구간_경계() {
+        assertThat(TaxService.progressiveTax(bd(14_000_000))).isEqualByComparingTo("840000"); // 6%
+        assertThat(TaxService.progressiveTax(bd(50_000_000))).isEqualByComparingTo("6240000"); // 15% - 126만
+        assertThat(TaxService.progressiveTax(BigDecimal.ZERO)).isEqualByComparingTo("0");
+    }
+
+    private static BigDecimal bd(long v) {
+        return BigDecimal.valueOf(v);
     }
 
     private Transaction tx(String date, BigDecimal amount, PaymentMethod pm, Category category, Card card, boolean confirmed) {

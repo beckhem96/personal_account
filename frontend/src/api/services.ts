@@ -6,6 +6,7 @@ import type {
     AssetResponse, AssetRequest, NetWorthResponse,
     TaxStockRequest, TaxStockResponse,
     YearEndSettlementRequest, YearEndSettlementResponse,
+    YearEndFullRequest, YearEndFullResponse,
     Card, CardRequest,
     RecurringTransaction, RecurringTransactionRequest,
     ApplyRecurringResponse,
@@ -201,6 +202,11 @@ export const simulateYearEnd = async (data: YearEndSettlementRequest) => {
 
 export const getAutoYearEndSettlement = async (year: number) => {
     const response = await api.get<YearEndSettlementRequest>('/tax/year-end/auto', { params: { year } });
+    return response.data;
+};
+
+export const calculateYearEndFull = async (data: YearEndFullRequest) => {
+    const response = await api.post<YearEndFullResponse>('/tax/year-end/full', data);
     return response.data;
 };
 

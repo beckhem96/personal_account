@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { calculateStockTax, simulateYearEnd, getAutoYearEndSettlement } from '../api/services';
-import type { TaxStockResponse, YearEndSettlementRequest, YearEndSettlementResponse } from '../types';
+import { calculateStockTax, simulateYearEnd, getAutoYearEndSettlement, calculateYearEndFull } from '../api/services';
+import type { TaxStockResponse, YearEndSettlementRequest, YearEndSettlementResponse, YearEndFullRequest, YearEndFullResponse } from '../types';
 import { formatCurrency, cn } from '../utils';
-import { Calculator, TrendingUp, DollarSign, Info, CheckCircle2, Database, Loader2, RefreshCw } from 'lucide-react';
+import { Calculator, TrendingUp, DollarSign, Info, CheckCircle2, Database, Loader2, RefreshCw, Receipt } from 'lucide-react';
 
-type TabKey = 'STOCK' | 'YEAR_END_MANUAL' | 'YEAR_END_AUTO';
+type TabKey = 'STOCK' | 'YEAR_END_MANUAL' | 'YEAR_END_AUTO' | 'YEAR_END_FULL';
 
 const TaxPage = () => {
     const [activeTab, setActiveTab] = useState<TabKey>('STOCK');
@@ -22,6 +22,7 @@ const TaxPage = () => {
                     <TabButton active={activeTab === 'STOCK'} onClick={() => setActiveTab('STOCK')} icon={<TrendingUp size={16} />} label="주식 양도세" />
                     <TabButton active={activeTab === 'YEAR_END_MANUAL'} onClick={() => setActiveTab('YEAR_END_MANUAL')} icon={<Calculator size={16} />} label="연말정산 (직접 입력)" />
                     <TabButton active={activeTab === 'YEAR_END_AUTO'} onClick={() => setActiveTab('YEAR_END_AUTO')} icon={<Database size={16} />} label="연말정산 (내 거래 기반)" />
+                    <TabButton active={activeTab === 'YEAR_END_FULL'} onClick={() => setActiveTab('YEAR_END_FULL')} icon={<Receipt size={16} />} label="연말정산 (정밀·결정세액)" />
                 </div>
             </div>
 
@@ -30,6 +31,7 @@ const TaxPage = () => {
                 {activeTab === 'STOCK' && <StockTaxCalculator />}
                 {activeTab === 'YEAR_END_MANUAL' && <YearEndManualSimulator />}
                 {activeTab === 'YEAR_END_AUTO' && <YearEndAutoSimulator />}
+                {activeTab === 'YEAR_END_FULL' && <YearEndFullCalculator />}
             </div>
         </div>
     );
@@ -408,5 +410,194 @@ const YearEndResultPanel = ({ result }: { result: YearEndSettlementResponse | nu
         </div>
     );
 };
+
+// ── 연말정산 (정밀·결정세액) ──────────────────────────────────────────────
+type FullInputs = {
+    salary: string; credit: string; cash: string; market: string; transport: string;
+    dependents: string; seniors: string; disabled: string;
+    nationalPension: string; healthInsurance: string; employmentInsurance: string;
+    insurancePremium: string; medical: string; education: string; donation: string; pensionSavings: string;
+    prepaid: string;
+};
+
+const emptyFullInputs: FullInputs = {
+    salary: '', credit: '', cash: '', market: '', transport: '',
+    dependents: '', seniors: '', disabled: '',
+    nationalPension: '', healthInsurance: '', employmentInsurance: '',
+    insurancePremium: '', medical: '', education: '', donation: '', pensionSavings: '',
+    prepaid: '',
+};
+
+const fullRequestFrom = (i: FullInputs): YearEndFullRequest => ({
+    totalSalary: Number(i.salary) || 0,
+    creditCardAmount: Number(i.credit) || 0,
+    debitCashAmount: Number(i.cash) || 0,
+    traditionalMarketAmount: Number(i.market) || 0,
+    publicTransportAmount: Number(i.transport) || 0,
+    dependents: Number(i.dependents) || 0,
+    seniors: Number(i.seniors) || 0,
+    disabled: Number(i.disabled) || 0,
+    nationalPension: Number(i.nationalPension) || 0,
+    healthInsurance: Number(i.healthInsurance) || 0,
+    employmentInsurance: Number(i.employmentInsurance) || 0,
+    insurancePremium: Number(i.insurancePremium) || 0,
+    medicalExpense: Number(i.medical) || 0,
+    educationExpense: Number(i.education) || 0,
+    donation: Number(i.donation) || 0,
+    pensionSavings: Number(i.pensionSavings) || 0,
+    prepaidTax: Number(i.prepaid) || 0,
+});
+
+const YearEndFullCalculator = () => {
+    const [inputs, setInputs] = useState<FullInputs>(emptyFullInputs);
+    const [result, setResult] = useState<YearEndFullResponse | null>(null);
+    const set = (k: keyof FullInputs) => (v: string) => setInputs({ ...inputs, [k]: v });
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            setResult(await calculateYearEndFull(fullRequestFrom(inputs)));
+        } catch {
+            alert('계산에 실패했습니다.');
+        }
+    };
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="p-3 bg-purple-50 text-purple-600 rounded-xl"><Receipt size={24} /></div>
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-800">연말정산 정밀 계산</h2>
+                        <p className="text-xs text-slate-500 mt-0.5">소득공제 + 세액공제 → 결정세액·환급액</p>
+                    </div>
+                </div>
+                <form onSubmit={handleSubmit} className="space-y-5">
+                    <FieldGroup title="급여 · 카드 사용액">
+                        <NumberField label="총급여 (연봉)" value={inputs.salary} onChange={set('salary')} placeholder="예: 50000000" required />
+                        <NumberField label="신용카드 (15%)" value={inputs.credit} onChange={set('credit')} placeholder="0" />
+                        <NumberField label="체크/현금 (30%)" value={inputs.cash} onChange={set('cash')} placeholder="0" />
+                        <NumberField label="전통시장 (40%)" value={inputs.market} onChange={set('market')} placeholder="0" />
+                        <NumberField label="대중교통 (40%)" value={inputs.transport} onChange={set('transport')} placeholder="0" />
+                    </FieldGroup>
+                    <FieldGroup title="인적공제 (본인 1인 자동 포함)">
+                        <NumberField label="부양가족 수 (본인 제외)" value={inputs.dependents} onChange={set('dependents')} placeholder="0" />
+                        <NumberField label="경로우대(70세↑) 수" value={inputs.seniors} onChange={set('seniors')} placeholder="0" />
+                        <NumberField label="장애인 수" value={inputs.disabled} onChange={set('disabled')} placeholder="0" />
+                    </FieldGroup>
+                    <FieldGroup title="4대보험 (소득공제)">
+                        <NumberField label="국민연금 납입액" value={inputs.nationalPension} onChange={set('nationalPension')} placeholder="0" />
+                        <NumberField label="건강+장기요양 납입액" value={inputs.healthInsurance} onChange={set('healthInsurance')} placeholder="0" />
+                        <NumberField label="고용보험 납입액" value={inputs.employmentInsurance} onChange={set('employmentInsurance')} placeholder="0" />
+                    </FieldGroup>
+                    <FieldGroup title="세액공제 항목">
+                        <NumberField label="보장성보험료 (12%, 100만 한도)" value={inputs.insurancePremium} onChange={set('insurancePremium')} placeholder="0" />
+                        <NumberField label="의료비 (총급여 3% 초과분 15%)" value={inputs.medical} onChange={set('medical')} placeholder="0" />
+                        <NumberField label="교육비 (15%)" value={inputs.education} onChange={set('education')} placeholder="0" />
+                        <NumberField label="기부금 (15%/초과 30%)" value={inputs.donation} onChange={set('donation')} placeholder="0" />
+                        <NumberField label="연금저축+IRP (15/12%, 900만 한도)" value={inputs.pensionSavings} onChange={set('pensionSavings')} placeholder="0" />
+                    </FieldGroup>
+                    <FieldGroup title="기납부세액">
+                        <NumberField label="기납부 소득세 (원천징수 합계)" value={inputs.prepaid} onChange={set('prepaid')} placeholder="0" />
+                    </FieldGroup>
+                    <button type="submit" className="w-full bg-purple-600 text-white py-4 rounded-xl font-bold hover:bg-purple-700 shadow-lg shadow-purple-600/20 transition-all">
+                        결정세액 계산
+                    </button>
+                </form>
+            </div>
+
+            <YearEndFullResultPanel result={result} />
+        </div>
+    );
+};
+
+const FieldGroup = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="space-y-3">
+        <h3 className="text-xs font-bold text-purple-600 uppercase tracking-wider">{title}</h3>
+        <div className="space-y-3 pl-1">{children}</div>
+    </div>
+);
+
+const YearEndFullResultPanel = ({ result }: { result: YearEndFullResponse | null }) => {
+    if (!result) {
+        return (
+            <div className="hidden lg:flex flex-col items-center justify-center h-full bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 p-12 text-center text-slate-400">
+                <Receipt size={48} className="mb-4 opacity-50" />
+                <p className="font-medium">항목을 입력하면 결정세액과 환급/추가납부액을 계산합니다.</p>
+            </div>
+        );
+    }
+    const refund = result.refundOrPay >= 0;
+    return (
+        <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 space-y-6">
+            <h2 className="text-xl font-bold text-slate-800">계산 결과</h2>
+
+            <ResultSection title="① 근로소득금액">
+                <Row label="총급여" value={result.grossSalary} />
+                <Row label="근로소득공제" value={-result.earnedIncomeDeduction} />
+                <Row label="근로소득금액" value={result.earnedIncome} strong />
+            </ResultSection>
+
+            <ResultSection title="② 종합소득공제 → 과세표준">
+                <Row label="인적공제" value={-result.personalDeduction} />
+                <Row label="연금보험료공제" value={-result.pensionInsuranceDeduction} />
+                <Row label="건강·고용보험" value={-result.specialIncomeDeduction} />
+                <Row label="신용카드 등" value={-result.cardDeduction} />
+                <Row label="과세표준" value={result.taxBase} strong />
+            </ResultSection>
+
+            <ResultSection title="③ 산출세액 → 세액공제 → 결정세액">
+                <Row label="산출세액" value={result.calculatedTax} />
+                <Row label="근로소득세액공제" value={-result.earnedIncomeTaxCredit} />
+                <Row label="보험료" value={-result.insuranceCredit} />
+                <Row label="의료비" value={-result.medicalCredit} />
+                <Row label="교육비" value={-result.educationCredit} />
+                <Row label="기부금" value={-result.donationCredit} />
+                <Row label="연금계좌" value={-result.pensionAccountCredit} />
+                <Row label="결정세액" value={result.determinedTax} strong />
+                <Row label="지방소득세(10%)" value={result.localIncomeTax} muted />
+            </ResultSection>
+
+            <div className={cn("p-6 rounded-2xl text-white shadow-lg", refund ? "bg-green-600 shadow-green-600/30" : "bg-red-500 shadow-red-500/30")}>
+                <p className={cn("font-medium mb-1", refund ? "text-green-100" : "text-red-100")}>
+                    기납부 {formatCurrency(result.prepaidTax)} − 결정세액 {formatCurrency(result.determinedTax)}
+                </p>
+                <p className="text-3xl font-bold tracking-tight">
+                    {refund ? '환급 ' : '추가납부 '}{formatCurrency(Math.abs(result.refundOrPay))}
+                </p>
+            </div>
+
+            <div className="bg-yellow-50 p-5 rounded-2xl border border-yellow-100 flex gap-4">
+                <div className="flex-shrink-0">
+                    <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600"><Info size={20} /></div>
+                </div>
+                <div>
+                    <h3 className="font-bold text-slate-800 mb-1">가이드</h3>
+                    <p className="text-sm text-slate-700 leading-relaxed">{result.guideMessage}</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ResultSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="space-y-1.5">
+        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">{title}</h3>
+        {children}
+    </div>
+);
+
+const Row = ({ label, value, strong, muted }: { label: string; value: number; strong?: boolean; muted?: boolean }) => (
+    <div className={cn("flex justify-between items-center px-4 py-2.5 rounded-xl",
+        strong ? "bg-slate-100" : "bg-slate-50")}>
+        <span className={cn("text-sm", strong ? "font-bold text-slate-800" : muted ? "text-slate-400" : "text-slate-500")}>{label}</span>
+        <span className={cn(
+            strong ? "text-base font-bold text-slate-900" : "text-sm font-semibold",
+            !strong && (value < 0 ? "text-green-600" : muted ? "text-slate-400" : "text-slate-700")
+        )}>
+            {value < 0 ? '-' : ''}{formatCurrency(Math.abs(value))}
+        </span>
+    </div>
+);
 
 export default TaxPage;

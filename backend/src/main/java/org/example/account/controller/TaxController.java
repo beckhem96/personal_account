@@ -3,6 +3,8 @@ package org.example.account.controller;
 import lombok.RequiredArgsConstructor;
 import org.example.account.dto.TaxStockRequest;
 import org.example.account.dto.TaxStockResponse;
+import org.example.account.dto.YearEndFullRequest;
+import org.example.account.dto.YearEndFullResponse;
 import org.example.account.dto.YearEndSettlementRequest;
 import org.example.account.dto.YearEndSettlementResponse;
 import org.example.account.service.TaxService;
@@ -34,5 +36,10 @@ public class TaxController {
     @GetMapping("/year-end/auto")
     public ResponseEntity<YearEndSettlementRequest> autoYearEnd(@RequestParam("year") int year) {
         return ResponseEntity.ok(taxService.computeYearEndFromTransactions(year));
+    }
+
+    @PostMapping("/year-end/full")
+    public ResponseEntity<YearEndFullResponse> calculateYearEndFull(@RequestBody YearEndFullRequest request) {
+        return ResponseEntity.ok(taxService.calculateYearEndFull(request));
     }
 }
