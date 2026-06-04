@@ -32,6 +32,12 @@ molit:
   api-key: ${MOLIT_API_KEY:}
   base-url: https://apis.data.go.kr/1613000/RTMSDataSvcAptTradeDev/getRTMSDataSvcAptTradeDev
 
+applyhome:
+  api-key: ${APPLYHOME_API_KEY:}
+  base-url: https://api.odcloud.kr/api/ApplyhomeInfoDetailSvc/v1
+  list-path: /getAPTLttotPblancDetail
+  remndr-path: /getRemndrLttotPblancDetail
+
 cnbc:
   rss:
     address-pre: https://www.cnbc.com/id/
