@@ -38,6 +38,10 @@ applyhome:
   list-path: /getAPTLttotPblancDetail
   remndr-path: /getRemndrLttotPblancDetail
 
+lh:
+  api-key: ${LH_API_KEY:}
+  base-url: https://apis.data.go.kr/B552555/lhLeaseNoticeInfo1
+
 cnbc:
   rss:
     address-pre: https://www.cnbc.com/id/
