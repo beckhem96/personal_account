@@ -33,6 +33,18 @@ const RANK_COLOR: Record<SubscriptionRank, string> = {
     REMAINDER: 'bg-amber-100 text-amber-800 border-amber-200',
 };
 
+// 공고 상태 — 접수중(RECEIVING) / 공고중(ANNOUNCED, 접수 시작 전)
+type SubStatus = 'RECEIVING' | 'ANNOUNCED';
+const STATUS_OPTIONS: Array<{ key: SubStatus; label: string }> = [
+    { key: 'RECEIVING', label: '접수중' },
+    { key: 'ANNOUNCED', label: '공고중' },
+];
+const STATUS_LABEL: Record<SubStatus, string> = { RECEIVING: '접수중', ANNOUNCED: '공고중' };
+const STATUS_COLOR: Record<SubStatus, string> = {
+    RECEIVING: 'bg-green-100 text-green-700',
+    ANNOUNCED: 'bg-blue-100 text-blue-700',
+};
+
 const SubscriptionsPage = () => {
     const [view, setView] = useState<View>('APPLYHOME');
 
@@ -82,6 +94,7 @@ const ApplyhomeView = () => {
     const [error, setError] = useState<string | null>(null);
     const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set(REGION_OPTIONS.map(r => r.key)));
     const [enabledRanks, setEnabledRanks] = useState<Set<SubscriptionRank>>(new Set(['SPECIAL', 'FIRST', 'SECOND', 'REMAINDER']));
+    const [enabledStatuses, setEnabledStatuses] = useState<Set<SubStatus>>(new Set(['RECEIVING', 'ANNOUNCED']));
     const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
     const fetchData = async () => {
@@ -100,10 +113,13 @@ const ApplyhomeView = () => {
 
     useEffect(() => { fetchData(); }, []);
 
-    const filteredSpecial = useMemo(() => filterByRegion(data?.special ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
-    const filteredFirst = useMemo(() => filterByRegion(data?.firstRank ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
-    const filteredSecond = useMemo(() => filterByRegion(data?.secondRank ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
-    const filteredRemainder = useMemo(() => filterByRegion(data?.remainder ?? [], enabledRegions, applyhomeRegionText), [data, enabledRegions]);
+    const narrow = (items: SubscriptionItem[], stage: SubscriptionRank) =>
+        filterByRegion(items, enabledRegions, applyhomeRegionText)
+            .filter(it => enabledStatuses.has(applyhomeStatus(it, stage)));
+    const filteredSpecial = useMemo(() => narrow(data?.special ?? [], 'SPECIAL'), [data, enabledRegions, enabledStatuses]);
+    const filteredFirst = useMemo(() => narrow(data?.firstRank ?? [], 'FIRST'), [data, enabledRegions, enabledStatuses]);
+    const filteredSecond = useMemo(() => narrow(data?.secondRank ?? [], 'SECOND'), [data, enabledRegions, enabledStatuses]);
+    const filteredRemainder = useMemo(() => narrow(data?.remainder ?? [], 'REMAINDER'), [data, enabledRegions, enabledStatuses]);
 
     const sections: Array<{ rank: SubscriptionRank; items: SubscriptionItem[] }> = ([
         { rank: 'SPECIAL' as SubscriptionRank, items: filteredSpecial },
@@ -142,6 +158,13 @@ const ApplyhomeView = () => {
                         </ToggleChip>
                     ))}
                 </ChipGroup>
+                <ChipGroup title="상태">
+                    {STATUS_OPTIONS.map(s => (
+                        <ToggleChip key={s.key} active={enabledStatuses.has(s.key)} onClick={() => setEnabledStatuses(toggle(enabledStatuses, s.key))}>
+                            {s.label}
+                        </ToggleChip>
+                    ))}
+                </ChipGroup>
             </div>
 
             {!loading && data && totalShown === 0 && !apiKeyMissing && (
@@ -176,6 +199,7 @@ const LhView = () => {
     const [error, setError] = useState<string | null>(null);
     const [enabledRegions, setEnabledRegions] = useState<Set<string>>(new Set(REGION_OPTIONS.map(r => r.key)));
     const [disabledTypes, setDisabledTypes] = useState<Set<string>>(new Set());
+    const [enabledStatuses, setEnabledStatuses] = useState<Set<SubStatus>>(new Set(['RECEIVING', 'ANNOUNCED']));
     const [lastFetched, setLastFetched] = useState<Date | null>(null);
 
     const fetchData = async () => {
@@ -204,9 +228,11 @@ const LhView = () => {
         return Array.from(set).sort();
     }, [data]);
 
-    const narrow = (items: LhNoticeItem[]) => filterByType(filterByRegion(items, enabledRegions, lhRegionText), disabledTypes);
-    const sale = useMemo(() => narrow(data?.sale ?? []), [data, enabledRegions, disabledTypes]);
-    const rent = useMemo(() => narrow(data?.rent ?? []), [data, enabledRegions, disabledTypes]);
+    const narrow = (items: LhNoticeItem[]) =>
+        filterByType(filterByRegion(items, enabledRegions, lhRegionText), disabledTypes)
+            .filter(it => enabledStatuses.has(lhStatus(it)));
+    const sale = useMemo(() => narrow(data?.sale ?? []), [data, enabledRegions, disabledTypes, enabledStatuses]);
+    const rent = useMemo(() => narrow(data?.rent ?? []), [data, enabledRegions, disabledTypes, enabledStatuses]);
 
     const totalShown = sale.length + rent.length;
     const apiKeyMissing = data && !data.apiKeyConfigured;
@@ -249,6 +275,13 @@ const LhView = () => {
                         ))}
                     </ChipGroup>
                 )}
+                <ChipGroup title="상태">
+                    {STATUS_OPTIONS.map(s => (
+                        <ToggleChip key={s.key} active={enabledStatuses.has(s.key)} onClick={() => setEnabledStatuses(toggle(enabledStatuses, s.key))}>
+                            {s.label}
+                        </ToggleChip>
+                    ))}
+                </ChipGroup>
             </div>
 
             {!loading && data && totalShown === 0 && !apiKeyMissing && <EmptyNotice />}
@@ -349,9 +382,12 @@ const ApplyhomeCard = ({ item, stage }: { item: SubscriptionItem; stage: Subscri
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3 hover:shadow-md transition">
             <div className="flex items-start justify-between gap-3">
                 <h3 className="font-bold text-slate-900 leading-snug">{item.name}</h3>
-                {item.houseType && (
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full flex-shrink-0">{item.houseType}</span>
-                )}
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <StatusBadge status={applyhomeStatus(item, stage)} />
+                    {item.houseType && (
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-xs rounded-full">{item.houseType}</span>
+                    )}
+                </div>
             </div>
 
             {item.address && (
@@ -416,14 +452,23 @@ const LhCard = ({ item }: { item: LhNoticeItem }) => {
                 </div>
             )}
 
-            {item.noticeStatus && (
-                <span className="inline-block px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded-full">{item.noticeStatus}</span>
-            )}
+            <div className="flex items-center gap-1.5">
+                <StatusBadge status={lhStatus(item)} />
+                {item.noticeStatus && item.noticeStatus !== STATUS_LABEL[lhStatus(item)] && (
+                    <span className="text-xs text-slate-400">{item.noticeStatus}</span>
+                )}
+            </div>
 
             {item.detailUrl && <DetailLink href={item.detailUrl} label="LH 청약센터에서 보기" />}
         </div>
     );
 };
+
+const StatusBadge = ({ status }: { status: SubStatus }) => (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${STATUS_COLOR[status]}`}>
+        {STATUS_LABEL[status]}
+    </span>
+);
 
 // 접수 시작 전이면 '시작 D-N'(예정, 파랑), 진행중이면 '마감 D-N'(임박 빨강/여유 초록)
 const ScheduleBadge = ({ begin, end }: { begin: string | null; end: string | null }) => {
@@ -479,6 +524,16 @@ function filterByRegion<T>(items: T[], enabled: Set<string>, textOf: (it: T) => 
 function filterByType(items: LhNoticeItem[], disabled: Set<string>): LhNoticeItem[] {
     if (disabled.size === 0) return items;
     return items.filter(it => !disabled.has(it.supplyTypeName ?? ''));
+}
+
+function applyhomeStatus(item: SubscriptionItem, stage: SubscriptionRank): SubStatus {
+    const { begin } = pickStageDates(item, stage);
+    // 접수 시작일이 미래면 공고중, 그 외(진행중·시작일 미상)는 접수중
+    return begin && daysUntil(begin) > 0 ? 'ANNOUNCED' : 'RECEIVING';
+}
+
+function lhStatus(item: LhNoticeItem): SubStatus {
+    return item.noticeStatus === '접수중' ? 'RECEIVING' : 'ANNOUNCED';
 }
 
 function pickStageDates(item: SubscriptionItem, stage: SubscriptionRank): { begin: string | null; end: string | null } {
