@@ -44,19 +44,20 @@ class LhSubscriptionServiceTest {
     }
 
     @Test
-    void 임대유형_필터_행복주택_국민임대만_통과하고_매입_전세임대는_제외() {
+    void 임대유형_전체_노출_매입_전세임대도_포함() {
         when(client.isAvailable()).thenReturn(true);
         when(client.fetchAll()).thenReturn(List.of(
                 rentRow("R1", "서울 강동 행복주택", "행복주택", "서울특별시"),
                 rentRow("R2", "서울 노원 국민임대", "국민임대", "서울특별시"),
-                rentRow("R3", "서울 매입임대 공고", "매입임대", "서울특별시"),
-                rentRow("R4", "서울 전세임대 공고", "전세임대", "서울특별시")
+                rentRow("R3", "서울 공공임대 공고", "공공임대", "서울특별시"),
+                rentRow("R4", "서울 매입임대 공고", "매입임대", "서울특별시"),
+                rentRow("R5", "서울 전세임대 공고", "전세임대", "서울특별시")
         ));
 
         LhNoticesResponse res = service.findActiveToday();
 
         assertThat(res.rent()).extracting(LhNoticeItem::supplyTypeName)
-                .containsExactlyInAnyOrder("행복주택", "국민임대");
+                .containsExactlyInAnyOrder("행복주택", "국민임대", "공공임대", "매입임대", "전세임대");
     }
 
     @Test

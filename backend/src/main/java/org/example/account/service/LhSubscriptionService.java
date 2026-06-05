@@ -19,8 +19,8 @@ import java.util.Set;
  * LH 분양·임대 공고를 조회해 사용자 지정 5개 지역(서울 + 의정부/남양주/하남/구리)의
  * "접수 마감 전" 공고만 분양/임대로 나눠 반환한다.
  *
- * <p>분양(05)·신혼희망타운(39)은 전부 포함, 임대(06)는 주요 유형(행복주택·국민임대·영구임대)만 포함한다.
- * 접수마감(PAN_SS)이거나 마감일(CLSG_DT)이 지난 공고는 제외한다.
+ * <p>분양(05)·신혼희망타운(39)·임대(06) 모두 전체 세부유형을 포함한다(공공임대·국민임대·행복주택·
+ * 영구임대·통합공공임대·매입임대·전세임대 등). 접수마감(PAN_SS)이거나 마감일(CLSG_DT)이 지난 공고는 제외.
  */
 @Service
 @RequiredArgsConstructor
@@ -28,9 +28,6 @@ public class LhSubscriptionService {
 
     static final String SEOUL_LABEL = "서울";
     static final Set<String> TARGET_DISTRICTS = Set.of("의정부", "남양주", "하남", "구리", "용인", "수원", "김포");
-
-    /** 임대(06) 공고 중 노출할 세부유형(AIS_TP_CD_NM 부분일치). 매입임대·전세임대·장기전세 등은 제외. */
-    static final Set<String> RENT_ALLOWED_TYPES = Set.of("행복주택", "국민임대", "영구임대");
 
     /** 임대 상위유형코드 */
     private static final String UPP_RENT = "06";
@@ -68,9 +65,7 @@ public class LhSubscriptionService {
                 continue;
             }
             if (item.category() == LhSupplyCategory.RENT) {
-                if (matchesRentType(item)) {
-                    rent.add(item);
-                }
+                rent.add(item);
             } else {
                 sale.add(item);
             }
@@ -112,19 +107,6 @@ public class LhSubscriptionService {
     private LhSupplyCategory categoryOf(JsonNode raw) {
         String upp = text(raw, "UPP_AIS_TP_CD");
         return UPP_RENT.equals(upp) ? LhSupplyCategory.RENT : LhSupplyCategory.SALE;
-    }
-
-    boolean matchesRentType(LhNoticeItem item) {
-        String type = item.supplyTypeName();
-        if (type == null) {
-            return false;
-        }
-        for (String allowed : RENT_ALLOWED_TYPES) {
-            if (type.contains(allowed)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     boolean matchesTargetRegion(LhNoticeItem item) {
