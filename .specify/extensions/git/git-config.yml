@@ -37,8 +37,8 @@ auto_commit:
     enabled: true
     message: "docs: amend constitution to v1.0.0 (principle additions + governance update)"
   after_specify:
-    enabled: false
-    message: "[Spec Kit] Add specification"
+    enabled: true
+    message: "docs: 가계부 단순화 및 현금흐름 대시보드 스펙 작성"
   after_clarify:
     enabled: false
     message: "[Spec Kit] Clarify specification"
