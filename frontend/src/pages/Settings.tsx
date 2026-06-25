@@ -61,7 +61,8 @@ const SettingsPage = () => {
 
     const handleYearEndCategoryChange = async (cat: CategoryResponse, value: YearEndCategory) => {
         try {
-            await updateCategory(cat.id, { name: cat.name, type: cat.type, yearEndCategory: value });
+            const finalValue = (value && value.trim() !== '') ? value : 'NONE';
+            await updateCategory(cat.id, { name: cat.name, type: cat.type, yearEndCategory: finalValue });
             fetchData();
         } catch (error) {
             alert('연말정산 매핑 변경에 실패했습니다.');
@@ -71,11 +72,20 @@ const SettingsPage = () => {
     const handleCategorySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setCategoryError('');
+        const trimmedName = categoryForm.name.trim();
+        if (!trimmedName) {
+            setCategoryError('카테고리 이름을 입력해 주세요.');
+            return;
+        }
         try {
+            const finalYearEndCategory = (categoryForm.yearEndCategory && categoryForm.yearEndCategory.trim() !== '') 
+                ? categoryForm.yearEndCategory 
+                : 'NONE';
+            const payload = { ...categoryForm, name: trimmedName, yearEndCategory: finalYearEndCategory };
             if (editingCategory) {
-                await updateCategory(editingCategory.id, categoryForm);
+                await updateCategory(editingCategory.id, payload);
             } else {
-                await createCategory(categoryForm);
+                await createCategory(payload);
             }
             setIsCategoryModalOpen(false);
             fetchData();

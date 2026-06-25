@@ -2,6 +2,8 @@ package org.example.account.service;
 
 import lombok.RequiredArgsConstructor;
 import org.example.account.domain.Category;
+import org.example.account.domain.TransactionType;
+import org.example.account.domain.YearEndCategory;
 import org.example.account.dto.CategoryRequest;
 import org.example.account.dto.CategoryResponse;
 import org.example.account.repository.BudgetRepository;
@@ -26,7 +28,18 @@ public class CategoryService {
 
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request) {
-        Category category = new Category(request.name(), request.type(), request.yearEndCategory());
+        if (request.name() == null || request.name().trim().isEmpty()) {
+            throw new IllegalArgumentException("카테고리 이름을 입력해 주세요.");
+        }
+        String trimmedName = request.name().trim();
+        if (categoryRepository.existsByName(trimmedName)) {
+            throw new IllegalArgumentException("이미 존재하는 카테고리 이름입니다.");
+        }
+        YearEndCategory yearEndCategory = request.yearEndCategory();
+        if (request.type() != TransactionType.EXPENSE) {
+            yearEndCategory = YearEndCategory.NONE;
+        }
+        Category category = new Category(trimmedName, request.type(), yearEndCategory);
         Category saved = categoryRepository.save(category);
         return CategoryResponse.from(saved);
     }
@@ -41,8 +54,21 @@ public class CategoryService {
     public CategoryResponse updateCategory(Long id, CategoryRequest request) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리를 찾을 수 없습니다: " + id));
-        category.update(request.name(), request.type(), request.yearEndCategory());
-        return CategoryResponse.from(category);
+        if (request.name() == null || request.name().trim().isEmpty()) {
+            throw new IllegalArgumentException("카테고리 이름을 입력해 주세요.");
+        }
+        String trimmedName = request.name().trim();
+        java.util.Optional<Category> duplicate = categoryRepository.findByName(trimmedName);
+        if (duplicate.isPresent() && !duplicate.get().getId().equals(id)) {
+            throw new IllegalArgumentException("이미 존재하는 카테고리 이름입니다.");
+        }
+        YearEndCategory yearEndCategory = request.yearEndCategory();
+        if (request.type() != TransactionType.EXPENSE) {
+            yearEndCategory = YearEndCategory.NONE;
+        }
+        category.update(trimmedName, request.type(), yearEndCategory);
+        Category saved = categoryRepository.save(category);
+        return CategoryResponse.from(saved);
     }
 
     @Transactional
