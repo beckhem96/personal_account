@@ -2,15 +2,11 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 
 import Dashboard from './pages/Dashboard';
-
 import Budget from './pages/Budget';
-
+import Ledger from './pages/Ledger';
 import Assets from './pages/Assets';
-
 import Tax from './pages/Tax';
-
 import Settings from './pages/Settings';
-
 import Investment from './pages/Investment';
 import StockAnalysis from './pages/StockAnalysis';
 import Housing from './pages/Housing';
@@ -23,6 +19,7 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/ledger" element={<Ledger />} />
           <Route path="/budget" element={<Budget />} />
           <Route path="/assets" element={<Assets />} />
           <Route path="/tax" element={<Tax />} />

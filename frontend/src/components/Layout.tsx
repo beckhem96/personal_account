@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Wallet, CreditCard, Calculator, Menu, X, LogOut, User, Settings, TrendingUp, BarChart3, Home, Upload, Bell } from 'lucide-react';
+import { LayoutDashboard, Wallet, CreditCard, Calculator, Menu, X, LogOut, User, Settings, TrendingUp, BarChart3, Home, Upload, Bell, Landmark } from 'lucide-react';
 import { cn } from '../utils';
 
 interface LayoutProps {
@@ -28,22 +28,23 @@ const Layout = ({ children }: LayoutProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/budget', icon: CreditCard, label: 'Budget & Ledger' },
-    { to: '/assets', icon: Wallet, label: 'Assets' },
-    { to: '/tax', icon: Calculator, label: 'Tax Simulation' },
-    { to: '/investment', icon: TrendingUp, label: 'Investment Sim' },
-    { to: '/stocks', icon: BarChart3, label: 'US Stocks' },
-    { to: '/housing', icon: Home, label: 'Housing' },
+    { to: '/', icon: LayoutDashboard, label: '대시보드' },
+    { to: '/ledger', icon: Wallet, label: '가계부 내역' },
+    { to: '/budget', icon: CreditCard, label: '예산 설정' },
+    { to: '/assets', icon: Landmark, label: '자산 관리' },
+    { to: '/tax', icon: Calculator, label: '연말정산 시뮬레이션' },
+    { to: '/investment', icon: TrendingUp, label: '주식/투자 시뮬레이션' },
+    { to: '/stocks', icon: BarChart3, label: '미국 주식 분석' },
+    { to: '/housing', icon: Home, label: '청약 분석' },
     { to: '/statements', icon: Upload, label: '명세서 가져오기' },
     { to: '/subscriptions', icon: Bell, label: '청약 일정' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: '/settings', icon: Settings, label: '설정' },
   ];
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  const SidebarContent = () => (
+  const renderSidebarContent = () => (
     <div className="flex flex-col h-full bg-slate-900 text-white">
         <div className="p-8 pb-4">
             <div className="flex items-center gap-2 mb-8">
@@ -69,7 +70,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="mt-auto p-6 border-t border-slate-800">
             <button className="flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white transition-colors w-full">
                 <LogOut size={20} />
-                <span className="font-medium text-sm">Sign Out</span>
+                <span className="font-medium text-sm">로그아웃</span>
             </button>
         </div>
     </div>
@@ -79,7 +80,7 @@ const Layout = ({ children }: LayoutProps) => {
     <div className="flex min-h-screen bg-slate-50">
       {/* Desktop Sidebar */}
       <aside className="w-72 flex-shrink-0 hidden md:block shadow-xl z-20">
-        <SidebarContent />
+        {renderSidebarContent()}
       </aside>
 
       {/* Mobile Sidebar (Overlay & Drawer) */}
@@ -87,7 +88,7 @@ const Layout = ({ children }: LayoutProps) => {
         <div className="fixed inset-0 z-50 md:hidden flex">
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={closeMenu} />
             <aside className="relative w-72 h-full shadow-2xl animate-in slide-in-from-left duration-300">
-                <SidebarContent />
+                {renderSidebarContent()}
                 <button onClick={closeMenu} className="absolute top-4 right-4 text-slate-400 hover:text-white">
                     <X size={24} />
                 </button>
@@ -108,7 +109,7 @@ const Layout = ({ children }: LayoutProps) => {
         {/* Desktop Header (Optional User Profile) */}
         <header className="hidden md:flex bg-white/50 backdrop-blur-sm border-b border-slate-200 px-8 py-4 justify-between items-center">
              <div className="text-sm text-slate-500">
-                Welcome back, User
+                반갑습니다, 사용자님
              </div>
              <div className="flex items-center space-x-4">
                 <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-slate-500">

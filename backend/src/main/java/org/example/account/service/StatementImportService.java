@@ -150,7 +150,7 @@ public class StatementImportService {
         for (int i = 1; i <= months; i++) {
             BigDecimal amount = (i == months) ? lastInstallment : monthly;
             LocalDate date = p.date().plusMonths(i - 1);
-            String key = String.format("HANA:%s:%s:%s:%d/%d", p.date(), p.merchant(), p.amount().toPlainString(), i, months);
+            String key = String.format("%s:%s:%s:%s:%d/%d", card.getCompany().name(), p.date(), p.merchant(), p.amount().toPlainString(), i, months);
             txs.add(buildTransaction(date, amount, p.merchant(), card, category, key, i, months));
         }
         return txs;

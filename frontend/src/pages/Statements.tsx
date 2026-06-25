@@ -77,7 +77,7 @@ const StatementsPage = () => {
                         <strong>지원 카드사:</strong>{' '}
                         {supported.length === 0 ? '불러오는 중…' : supported.map(s => s.displayName).join(', ')}
                     </p>
-                    <p>업로드된 거래는 <strong>미확정 상태</strong>로 등록되며, Gemini로 카테고리가 자동 분류됩니다. 분류 결과를 확인한 뒤 Budget 페이지에서 확정하세요.</p>
+                    <p>업로드된 거래는 <strong>미확정 상태</strong>로 등록되며, Gemini로 카테고리가 자동 분류됩니다. 분류 결과를 확인한 뒤 가계부 내역 페이지에서 확정하세요.</p>
                     <p>같은 명세서를 다시 업로드해도 중복은 자동으로 스킵됩니다. 할부 거래는 매월 분할 결제로 자동 전개됩니다.</p>
                 </div>
             </div>
@@ -183,7 +183,7 @@ const StatementsPage = () => {
                     </div>
 
                     <p className="text-sm text-slate-600">
-                        등록된 거래는 <strong>Budget 페이지의 예정 거래</strong>에서 확인하고 확정할 수 있습니다.
+                        등록된 거래는 <strong>가계부 내역 페이지</strong>에서 확인하고 확정할 수 있습니다.
                     </p>
 
                     {result.summary.length > 0 && (

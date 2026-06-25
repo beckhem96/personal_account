@@ -43,16 +43,25 @@ public class TransactionService {
                     .orElseThrow(() -> new IllegalArgumentException("Asset not found"));
         }
 
-        // INCOME/EXPENSE에서 assetId 미지정 시 기본 자산 자동 사용 (단, 저축/투자는 이체처럼 명시적 지정 필요)
-        boolean isAssetTransfer = category.getType() == TransactionType.TRANSFER || "저축/투자".equals(category.getName());
-        if (asset == null && !isAssetTransfer) {
-            asset = assetRepository.findByIsDefaultTrue().orElse(null);
-        }
-
         Asset toAsset = null;
         if (request.toAssetId() != null) {
             toAsset = assetRepository.findById(request.toAssetId())
                     .orElseThrow(() -> new IllegalArgumentException("To Asset not found"));
+        }
+
+        // INCOME/EXPENSE에서 assetId 미지정 시 기본 자산 자동 사용 (단, 저축/투자는 이체처럼 명시적 지정 필요)
+        boolean isAssetTransfer = category.getType() == TransactionType.TRANSFER || "저축/투자".equals(category.getName());
+        if (isAssetTransfer) {
+            if (asset == null) {
+                throw new IllegalArgumentException("이체 또는 저축/투자 거래에는 출금 자산(From)을 필수 선택해야 합니다.");
+            }
+            if (toAsset == null) {
+                throw new IllegalArgumentException("이체 또는 저축/투자 거래에는 입금 자산(To)을 필수 선택해야 합니다.");
+            }
+        } else {
+            if (asset == null) {
+                asset = assetRepository.findByIsDefaultTrue().orElse(null);
+            }
         }
 
         boolean confirmed = request.isConfirmed() != null ? request.isConfirmed() : true;
@@ -106,16 +115,24 @@ public class TransactionService {
                     .orElseThrow(() -> new IllegalArgumentException("Asset not found"));
         }
 
-        // INCOME/EXPENSE에서 assetId 미지정 시 기본 자산 자동 사용 (단, 저축/투자는 이체처럼 명시적 지정 필요)
-        boolean isAssetTransfer = category.getType() == TransactionType.TRANSFER || "저축/투자".equals(category.getName());
-        if (asset == null && !isAssetTransfer) {
-            asset = assetRepository.findByIsDefaultTrue().orElse(null);
-        }
-
         Asset toAsset = null;
         if (request.toAssetId() != null) {
             toAsset = assetRepository.findById(request.toAssetId())
                     .orElseThrow(() -> new IllegalArgumentException("To Asset not found"));
+        }
+
+        boolean isAssetTransfer = category.getType() == TransactionType.TRANSFER || "저축/투자".equals(category.getName());
+        if (isAssetTransfer) {
+            if (asset == null) {
+                throw new IllegalArgumentException("이체 또는 저축/투자 거래에는 출금 자산(From)을 필수 선택해야 합니다.");
+            }
+            if (toAsset == null) {
+                throw new IllegalArgumentException("이체 또는 저축/투자 거래에는 입금 자산(To)을 필수 선택해야 합니다.");
+            }
+        } else {
+            if (asset == null) {
+                asset = assetRepository.findByIsDefaultTrue().orElse(null);
+            }
         }
 
         transaction.update(

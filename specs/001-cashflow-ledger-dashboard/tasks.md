@@ -14,7 +14,7 @@
 
 **Purpose**: 개발 환경 구동 및 로컬 빌드 검증
 
-- [ ] T001 로컬 가동 스크립트를 사용하여 DB 및 서버를 기동하고 정상 동작 확인 [start.sh]
+- [x] T001 로컬 가동 스크립트를 사용하여 DB 및 서버를 기동하고 정상 동작 확인 [start.sh]
 
 ---
 
@@ -22,10 +22,10 @@
 
 **Purpose**: 사용자 스토리 개발을 위해 필요한 공통 비즈니스 제약 규칙 및 공통 서비스 리팩토링
 
-- [ ] T002 이체/투자 거래 시 From/To 자산 입력 검증에 대한 백엔드 단위 테스트 작성 [backend/src/test/java/org/example/account/service/TransactionServiceTest.java]
-- [ ] T003 이체 및 저축/투자 거래 시 From/To 자산이 누락되면 예외를 던지는 검증 구현 [backend/src/main/java/org/example/account/service/TransactionService.java]
-- [ ] T004 엑셀 임포트 시 카드사별 동적 `externalRef` prefix 키 생성을 위한 단위 테스트 작성 [backend/src/test/java/org/example/account/service/StatementImportServiceTest.java]
-- [ ] T005 엑셀 임포트 중복 방지 키 prefix를 `"HANA"` 고정에서 `card.getCompany().name()`으로 동적 변경 구현 [backend/src/main/java/org/example/account/service/StatementImportService.java]
+- [x] T002 이체/투자 거래 시 From/To 자산 입력 검증에 대한 백엔드 단위 테스트 작성 [backend/src/test/java/org/example/account/service/TransactionServiceTest.java]
+- [x] T003 이체 및 저축/투자 거래 시 From/To 자산이 누락되면 예외를 던지는 검증 구현 [backend/src/main/java/org/example/account/service/TransactionService.java]
+- [x] T004 엑셀 임포트 시 카드사별 동적 `externalRef` prefix 키 생성을 위한 단위 테스트 작성 [backend/src/test/java/org/example/account/service/StatementImportServiceTest.java]
+- [x] T005 엑셀 임포트 중복 방지 키 prefix를 `"HANA"` 고정에서 `card.getCompany().name()`으로 동적 변경 구현 [backend/src/main/java/org/example/account/service/StatementImportService.java]
 
 ---
 
@@ -37,13 +37,13 @@
 
 ### Tests for User Story 1 (MANDATORY - TDD required) ⚠️
 
-- [ ] T006 [P] [US1] 이번 달 현금흐름 요약 통계 조회를 위한 Repository 및 Service 조회 테스트 케이스 작성 [backend/src/test/java/org/example/account/service/TransactionServiceTest.java]
+- [x] T006 [P] [US1] 이번 달 현금흐름 요약 통계 조회를 위한 Repository 및 Service 조회 테스트 케이스 작성 [backend/src/test/java/org/example/account/service/TransactionServiceTest.java]
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] 이번 달의 결제수단별/카테고리별 지출 및 소득 요약 통계 조회 쿼리 및 서비스 로직 구현 [backend/src/main/java/org/example/account/service/TransactionService.java]
-- [ ] T008 [US1] 프론트엔드 대시보드(`frontend/src/pages/Dashboard.tsx`) 한글화 및 현금흐름 요약(유입, 유출, 순현금흐름) 카드 배치 [frontend/src/pages/Dashboard.tsx]
-- [ ] T009 [US1] Recharts를 이용한 결제수단별(신용/체크/현금/이체) 지출 비중 원형 차트(PieChart) 시각화 및 최근 거래 리스트 연동 [frontend/src/pages/Dashboard.tsx]
+- [x] T007 [US1] 이번 달의 결제수단별/카테고리별 지출 및 소득 요약 통계 조회 쿼리 및 서비스 로직 구현 [backend/src/main/java/org/example/account/service/TransactionService.java]
+- [x] T008 [US1] 프론트엔드 대시보드(`frontend/src/pages/Dashboard.tsx`) 한글화 및 현금흐름 요약(유입, 유출, 순현금흐름) 카드 배치 [frontend/src/pages/Dashboard.tsx]
+- [x] T009 [US1] Recharts를 이용한 결제수단별(신용/체크/현금/이체) 지출 비중 원형 차트(PieChart) 시각화 및 최근 거래 리스트 연동 [frontend/src/pages/Dashboard.tsx]
 
 ---
 
@@ -55,13 +55,13 @@
 
 ### Tests for User Story 2 (MANDATORY - TDD required) ⚠️
 
-- [ ] T010 [P] [US2] 예산 대비 실제 지출액 집계 비즈니스 로직에 대한 단위 테스트 작성 [backend/src/test/java/org/example/account/service/BudgetServiceTest.java]
+- [x] T010 [P] [US2] 예산 대비 실제 지출액 집계 비즈니스 로직에 대한 단위 테스트 작성 [backend/src/test/java/org/example/account/service/BudgetServiceTest.java]
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] 특정 월의 카테고리별 예산 설정 정보와 실제 지출액을 매핑하여 반환하는 API 구현 [backend/src/main/java/org/example/account/service/BudgetService.java]
-- [ ] T012 [US2] 대시보드 페이지에 카테고리별 예산 대비 지출 비율을 표시하는 진척도(Progress Bar) UI 구현 (80% 이상 노란색, 100% 초과 빨간색 적용) [frontend/src/pages/Dashboard.tsx]
-- [ ] T013 [US2] 기존 `Budget.tsx` 가계부 화면에서 거래 내역 관리 및 팝업 모달을 제거하여 오직 예산 수립/설정만 수행하는 전용 페이지로 리팩토링 [frontend/src/pages/Budget.tsx]
+- [x] T011 [US2] 특정 월의 카테고리별 예산 설정 정보와 실제 지출액을 매핑하여 반환하는 API 구현 [backend/src/main/java/org/example/account/service/BudgetService.java]
+- [x] T012 [US2] 대시보드 페이지에 카테고리별 예산 대비 지출 비율을 표시하는 진척도(Progress Bar) UI 구현 (80% 이상 노란색, 100% 초과 빨간색 적용) [frontend/src/pages/Dashboard.tsx]
+- [x] T013 [US2] 기존 `Budget.tsx` 가계부 화면에서 거래 내역 관리 및 팝업 모달을 제거하여 오직 예산 수립/설정만 수행하는 전용 페이지로 리팩토링 [frontend/src/pages/Budget.tsx]
 
 ---
 
@@ -73,14 +73,14 @@
 
 ### Tests for User Story 3 (MANDATORY - TDD required) ⚠️
 
-- [ ] T014 [P] [US3] 프론트엔드 수동 입력 수식 평가기(`evaluateExpr`) 엣지 케이스 단위 테스트 보강 [frontend/src/utils/index.test.ts]
+- [x] T014 [P] [US3] 프론트엔드 수동 입력 수식 평가기(`evaluateExpr`) 엣지 케이스 단위 테스트 보강 [frontend/src/utils/index.test.ts]
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] 신규 가계부 거래 관리 페이지 컴포넌트 파일 생성 및 목록/필터 레이아웃 기본 구조 작성 [frontend/src/pages/Ledger.tsx]
-- [ ] T016 [US3] 라우터에 `/ledger` 등록 및 Sidebar 네비게이션 메뉴에 '가계부 내역' 항목 한글화 추가 [frontend/src/App.tsx], [frontend/src/components/Layout.tsx]
-- [ ] T017 [US3] `Ledger.tsx`에 수동 입력 단일 팝업 모달 폼 구현 (금액 수식 연산 실시간 출력, 이체/저축/투자 타입 시 From-To 자산 입력란 필수 분기 처리 포함) [frontend/src/pages/Ledger.tsx]
-- [ ] T018 [US3] `Ledger.tsx`에 월별 거래 목록 필터(지급수단, 기간) 및 수정/삭제 API 연동 완료 [frontend/src/pages/Ledger.tsx]
+- [x] T015 [US3] 신규 가계부 거래 관리 페이지 컴포넌트 파일 생성 및 목록/필터 레이아웃 기본 구조 작성 [frontend/src/pages/Ledger.tsx]
+- [x] T016 [US3] 라우터에 `/ledger` 등록 및 Sidebar 네비게이션 메뉴에 '가계부 내역' 항목 한글화 추가 [frontend/src/App.tsx], [frontend/src/components/Layout.tsx]
+- [x] T017 [US3] `Ledger.tsx`에 수동 입력 단일 팝업 모달 폼 구현 (금액 수식 연산 실시간 출력, 이체/저축/투자 타입 시 From-To 자산 입력란 필수 분기 처리 포함) [frontend/src/pages/Ledger.tsx]
+- [x] T018 [US3] `Ledger.tsx`에 월별 거래 목록 필터(지급수단, 기간) 및 수정/삭제 API 연동 완료 [frontend/src/pages/Ledger.tsx]
 
 ---
 
@@ -92,13 +92,13 @@
 
 ### Tests for User Story 4 (MANDATORY - TDD required) ⚠️
 
-- [ ] T019 [P] [US4] 신한카드 명세서 엑셀 파서(`ShinhanCardStatementParser`) 및 국민카드 명세서 엑셀 파서(`KBCardStatementParser`) 독립 단위 테스트 작성 [backend/src/test/java/org/example/account/statement/ShinhanCardStatementParserTest.java], [backend/src/test/java/org/example/account/statement/KBCardStatementParserTest.java]
+- [x] T019 [P] [US4] 신한카드 명세서 엑셀 파서(`ShinhanCardStatementParser`) 및 국민카드 명세서 엑셀 파서(`KBCardStatementParser`) 독립 단위 테스트 작성 [backend/src/test/java/org/example/account/statement/ShinhanCardStatementParserTest.java], [backend/src/test/java/org/example/account/statement/KBCardStatementParserTest.java]
 
 ### Implementation for User Story 4
 
-- [ ] T020 [US4] `CardStatementParser` 인터페이스를 구현하는 `ShinhanCardStatementParser` 클래스 생성 및 헤더 키워드 매칭, 신한 전용 중복 방지 naturalKey 생성 로직 구현 [backend/src/main/java/org/example/account/statement/ShinhanCardStatementParser.java]
-- [ ] T021 [US4] `CardStatementParser` 인터페이스를 구현하는 `KBCardStatementParser` 클래스 생성 및 헤더 키워드 매칭, KB 전용 중복 방지 naturalKey 생성 로직 구현 [backend/src/main/java/org/example/account/statement/KBCardStatementParser.java]
-- [ ] T022 [US4] 명세서 가져오기 화면(`Statements.tsx`)에 신한/국민카드 지원 여부 드롭다운 및 한글 UI 개선 [frontend/src/pages/Statements.tsx]
+- [x] T020 [US4] `CardStatementParser` 인터페이스를 구현하는 `ShinhanCardStatementParser` 클래스 생성 및 헤더 키워드 매칭, 신한 전용 중복 방지 naturalKey 생성 로직 구현 [backend/src/main/java/org/example/account/statement/ShinhanCardStatementParser.java]
+- [x] T021 [US4] `CardStatementParser` 인터페이스를 구현하는 `KBCardStatementParser` 클래스 생성 및 헤더 키워드 매칭, KB 전용 중복 방지 naturalKey 생성 로직 구현 [backend/src/main/java/org/example/account/statement/KBCardStatementParser.java]
+- [x] T022 [US4] 명세서 가져오기 화면(`Statements.tsx`)에 신한/국민카드 지원 여부 드롭다운 및 한글 UI 개선 [frontend/src/pages/Statements.tsx]
 
 ---
 
@@ -106,9 +106,9 @@
 
 **Purpose**: 전체 품질 보증, 성능 최적화 및 린트/빌드 검사
 
-- [ ] T023 전체 백엔드 컴파일 및 JUnit 테스트 실행 완료 및 에러 확인 [backend]
-- [ ] T024 전체 프론트엔드 TypeScript 린트 에러 및 프로덕션 빌드 통과 여부 검증 [frontend]
-- [ ] T025 [P] Quickstart 가이드의 통합 시나리오 수동 테스트 수행 완료 및 문서화 [specs/001-cashflow-ledger-dashboard/quickstart.md]
+- [x] T023 전체 백엔드 컴파일 및 JUnit 테스트 실행 완료 및 에러 확인 [backend]
+- [x] T024 전체 프론트엔드 TypeScript 린트 에러 및 프로덕션 빌드 통과 여부 검증 [frontend]
+- [x] T025 [P] Quickstart 가이드의 통합 시나리오 수동 테스트 수행 완료 및 문서화 [specs/001-cashflow-ledger-dashboard/quickstart.md]
 
 ---
 
