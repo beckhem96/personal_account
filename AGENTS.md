@@ -75,5 +75,5 @@ docker-compose down # DB 완전 종료
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan
-at specs/001-cashflow-ledger-dashboard/plan.md
+at specs/002-fix-category-creation/plan.md
 <!-- SPECKIT END -->
