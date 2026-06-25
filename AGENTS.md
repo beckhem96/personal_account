@@ -71,3 +71,8 @@ docker-compose down # DB 완전 종료
 - [ ] 타입 변경 → 백엔드 DTO와 프론트 타입 동기화 확인
 - [ ] API 변경 → `api/services.ts` 함수 업데이트
 - [ ] 커밋 메시지 한국어로 작성
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->
