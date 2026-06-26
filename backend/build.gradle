@@ -42,3 +42,34 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+def loadDotEnv() {
+    def envFile = file("${project.rootDir}/.env")
+    if (!envFile.exists()) {
+        envFile = file("${project.rootDir}/../.env")
+    }
+    def envMap = [:]
+    if (envFile.exists()) {
+        envFile.eachLine { line ->
+            line = line.trim()
+            if (!line.isEmpty() && !line.startsWith('#') && line.contains('=')) {
+                def index = line.indexOf('=')
+                def key = line.substring(0, index).trim()
+                def value = line.substring(index + 1).trim()
+                if (value.startsWith('"') && value.endsWith('"')) {
+                    value = value.substring(1, value.length() - 1)
+                } else if (value.startsWith("'") && value.endsWith("'")) {
+                    value = value.substring(1, value.length() - 1)
+                }
+                envMap[key] = value
+            }
+        }
+    }
+    return envMap
+}
+
+tasks.withType(ProcessForkOptions).configureEach {
+    loadDotEnv().each { key, val ->
+        environment(key, val)
+    }
+}
