@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, RefreshCw, AlertCircle, Loader2, MapPin, Calendar, ExternalLink, Info, Building2, Landmark } from 'lucide-react';
-import { getTodaySubscriptions, getLhSubscriptions } from '../api/services';
+import { getTodaySubscriptions, getLhSubscriptions, getShSubscriptions, getGhSubscriptions } from '../api/services';
 import type {
     SubscriptionItem, SubscriptionRank, SubscriptionsResponse,
     LhNoticeItem, LhNoticesResponse, LhSupplyCategory,
 } from '../types';
 
-type View = 'APPLYHOME' | 'LH';
+type View = 'APPLYHOME' | 'LH' | 'SH' | 'GH';
 
 const REGION_OPTIONS: Array<{ key: string; label: string; token: string }> = [
     { key: 'SEOUL', label: '서울', token: '서울' },
@@ -59,17 +59,26 @@ const SubscriptionsPage = () => {
                         서울 + 경기 4개 지역 (의정부/남양주/하남/구리) · 접수 예정 + 진행중 공고
                     </p>
                 </div>
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 self-start">
+                <div className="inline-flex rounded-xl bg-slate-100 p-1 self-start flex-wrap gap-1">
                     <TabButton active={view === 'APPLYHOME'} onClick={() => setView('APPLYHOME')} icon={Building2}>
                         청약홈 (APT)
                     </TabButton>
                     <TabButton active={view === 'LH'} onClick={() => setView('LH')} icon={Landmark}>
                         LH 공공
                     </TabButton>
+                    <TabButton active={view === 'SH'} onClick={() => setView('SH')} icon={Building2}>
+                        SH 공공
+                    </TabButton>
+                    <TabButton active={view === 'GH'} onClick={() => setView('GH')} icon={Building2}>
+                        GH 공공
+                    </TabButton>
                 </div>
             </div>
 
-            {view === 'APPLYHOME' ? <ApplyhomeView /> : <LhView />}
+            {view === 'APPLYHOME' && <ApplyhomeView />}
+            {view === 'LH' && <LhView />}
+            {view === 'SH' && <ShView />}
+            {view === 'GH' && <GhView />}
         </div>
     );
 };
@@ -192,8 +201,24 @@ const ApplyhomeView = () => {
     );
 };
 
-// ── LH 공공분양·임대 ─────────────────────────────────────────────────────
-const LhView = () => {
+// ── LH/SH/GH 공공분양·임대 통합 컴포넌트 ──────────────────────────────────
+interface PublicAgencyViewProps {
+    agencyName: string;
+    apiKeyEnvVar: string;
+    apiServiceName: string;
+    fetchApi: () => Promise<LhNoticesResponse>;
+    infoMessage?: string;
+    detailLinkLabel: string;
+}
+
+const PublicAgencyView = ({
+    agencyName,
+    apiKeyEnvVar,
+    apiServiceName,
+    fetchApi,
+    infoMessage,
+    detailLinkLabel,
+}: PublicAgencyViewProps) => {
     const [data, setData] = useState<LhNoticesResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -206,18 +231,18 @@ const LhView = () => {
         setLoading(true);
         setError(null);
         try {
-            const res = await getLhSubscriptions();
+            const res = await fetchApi();
             setData(res);
             setDisabledTypes(new Set()); // 새 데이터 로드 시 전체 선택
             setLastFetched(new Date());
         } catch (e: any) {
-            setError(e?.response?.data?.message || e?.message || 'LH 공고를 불러올 수 없습니다.');
+            setError(e?.response?.data?.message || e?.message || `${agencyName} 공고를 불러올 수 없습니다.`);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => { fetchData(); }, []);
+    useEffect(() => { fetchData(); }, [fetchApi]);
 
     // 공급유형 칩은 응답에 실제로 존재하는 유형명(AIS_TP_CD_NM)으로 동적 구성
     const availableTypes = useMemo(() => {
@@ -243,17 +268,16 @@ const LhView = () => {
 
             {apiKeyMissing && (
                 <KeyMissingNotice
-                    serviceName="한국토지주택공사_분양임대공고문 조회 서비스"
-                    envVar="LH_API_KEY"
+                    serviceName={apiServiceName}
+                    envVar={apiKeyEnvVar}
                 />
             )}
             {error && <ErrorNotice message={error} />}
-            {!apiKeyMissing && (
+            {!apiKeyMissing && infoMessage && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 items-start">
                     <Info className="text-blue-600 flex-shrink-0 mt-0.5" size={18} />
                     <p className="text-sm text-blue-900">
-                        LH API는 공공데이터포털에서 별도 "활용신청"이 필요합니다. 결과가 비어 있으면 신청 승인 여부를 확인하세요.
-                        목록에 접수기간이 없는 공고는 상세 링크에서 일정을 확인할 수 있습니다.
+                        {infoMessage}
                     </p>
                 </div>
             )}
@@ -286,13 +310,46 @@ const LhView = () => {
 
             {!loading && data && totalShown === 0 && !apiKeyMissing && <EmptyNotice />}
 
-            <LhSection title="분양" category="SALE" items={sale} />
-            <LhSection title="임대" category="RENT" items={rent} />
+            <LhSection title="분양" category="SALE" items={sale} detailLinkLabel={detailLinkLabel} />
+            <LhSection title="임대" category="RENT" items={rent} detailLinkLabel={detailLinkLabel} />
         </div>
     );
 };
 
-const LhSection = ({ title, category, items }: { title: string; category: LhSupplyCategory; items: LhNoticeItem[] }) => {
+const LhView = () => (
+    <PublicAgencyView
+        agencyName="LH"
+        apiKeyEnvVar="LH_API_KEY"
+        apiServiceName="한국토지주택공사_분양임대공고문 조회 서비스"
+        fetchApi={getLhSubscriptions}
+        infoMessage="LH API는 공공데이터포털에서 별도 '활용신청'이 필요합니다. 결과가 비어 있으면 신청 승인 여부를 확인하세요. 목록에 접수기간이 없는 공고는 상세 링크에서 일정을 확인할 수 있습니다."
+        detailLinkLabel="LH 청약센터에서 보기"
+    />
+);
+
+const ShView = () => (
+    <PublicAgencyView
+        agencyName="SH"
+        apiKeyEnvVar="MYHOME_API_KEY"
+        apiServiceName="국토교통부 마이홈포털 공공주택 모집공고 조회 서비스"
+        fetchApi={getShSubscriptions}
+        infoMessage="SH 공고는 국토교통부 마이홈포털 API를 활용하여 수집됩니다. 목록에 접수기간이 없는 공고는 상세 링크에서 일정을 확인할 수 있습니다."
+        detailLinkLabel="SH 청약센터에서 보기"
+    />
+);
+
+const GhView = () => (
+    <PublicAgencyView
+        agencyName="GH"
+        apiKeyEnvVar="MYHOME_API_KEY"
+        apiServiceName="국토교통부 마이홈포털 공공주택 모집공고 조회 서비스"
+        fetchApi={getGhSubscriptions}
+        infoMessage="GH 공고는 국토교통부 마이홈포털 API를 활용하여 수집됩니다. 목록에 접수기간이 없는 공고는 상세 링크에서 일정을 확인할 수 있습니다."
+        detailLinkLabel="GH 청약센터에서 보기"
+    />
+);
+
+const LhSection = ({ title, category, items, detailLinkLabel }: { title: string; category: LhSupplyCategory; items: LhNoticeItem[]; detailLinkLabel?: string }) => {
     if (items.length === 0) return null;
     const color = category === 'SALE'
         ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
@@ -305,7 +362,7 @@ const LhSection = ({ title, category, items }: { title: string; category: LhSupp
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {items.map((item, idx) => (
-                    <LhCard key={`${item.panId ?? item.name}-${idx}`} item={item} />
+                    <LhCard key={`${item.panId ?? item.name}-${idx}`} item={item} detailLinkLabel={detailLinkLabel} />
                 ))}
             </div>
         </section>
@@ -415,7 +472,7 @@ const ApplyhomeCard = ({ item, stage }: { item: SubscriptionItem; stage: Subscri
     );
 };
 
-const LhCard = ({ item }: { item: LhNoticeItem }) => {
+const LhCard = ({ item, detailLinkLabel = "LH 청약센터에서 보기" }: { item: LhNoticeItem; detailLinkLabel?: string }) => {
     const daysLeft = item.rcptEnd ? daysUntil(item.rcptEnd) : null;
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 space-y-3 hover:shadow-md transition">
@@ -459,7 +516,7 @@ const LhCard = ({ item }: { item: LhNoticeItem }) => {
                 )}
             </div>
 
-            {item.detailUrl && <DetailLink href={item.detailUrl} label="LH 청약센터에서 보기" />}
+            {item.detailUrl && <DetailLink href={item.detailUrl} label={detailLinkLabel} />}
         </div>
     );
 };

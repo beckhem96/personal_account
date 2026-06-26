@@ -42,6 +42,12 @@ lh:
   api-key: ${LH_API_KEY:}
   base-url: https://apis.data.go.kr/B552555/lhLeaseNoticeInfo1
 
+myhome:
+  api-key: ${MYHOME_API_KEY:}
+  base-url: http://apis.data.go.kr/1613000/HWSPR02
+  rental-path: /rsdtRcritNtcList
+  sales-path: /ltRsdtRcritNtcList
+
 cnbc:
   rss:
     address-pre: https://www.cnbc.com/id/

@@ -17,6 +17,7 @@ public class SubscriptionController {
 
     private final SubscriptionService subscriptionService;
     private final LhSubscriptionService lhSubscriptionService;
+    private final org.example.account.service.MyHomeSubscriptionService myHomeSubscriptionService;
 
     @GetMapping("/today")
     public ResponseEntity<SubscriptionsResponse> getTodaySubscriptions() {
@@ -26,5 +27,15 @@ public class SubscriptionController {
     @GetMapping("/lh/today")
     public ResponseEntity<LhNoticesResponse> getTodayLhNotices() {
         return ResponseEntity.ok(lhSubscriptionService.findActiveToday());
+    }
+
+    @GetMapping("/sh/today")
+    public ResponseEntity<LhNoticesResponse> getTodayShNotices() {
+        return ResponseEntity.ok(myHomeSubscriptionService.findShActiveToday());
+    }
+
+    @GetMapping("/gh/today")
+    public ResponseEntity<LhNoticesResponse> getTodayGhNotices() {
+        return ResponseEntity.ok(myHomeSubscriptionService.findGhActiveToday());
     }
 }

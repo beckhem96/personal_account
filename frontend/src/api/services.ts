@@ -303,3 +303,15 @@ export const getLhSubscriptions = async () => {
     const response = await api.get<LhNoticesResponse>('/subscriptions/lh/today');
     return response.data;
 };
+
+// SH 공공분양·임대 청약
+export const getShSubscriptions = async () => {
+    const response = await api.get<LhNoticesResponse>('/subscriptions/sh/today');
+    return response.data;
+};
+
+// GH 공공분양·임대 청약
+export const getGhSubscriptions = async () => {
+    const response = await api.get<LhNoticesResponse>('/subscriptions/gh/today');
+    return response.data;
+};
