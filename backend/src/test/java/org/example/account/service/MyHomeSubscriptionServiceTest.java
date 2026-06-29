@@ -80,4 +80,39 @@ class MyHomeSubscriptionServiceTest {
         assertThat(ghResponse.apiKeyConfigured()).isTrue();
         assertThat(ghResponse.rent()).extracting(LhNoticeItem::name).containsExactly("GH 남양주 공고");
     }
+
+    @Test
+    void SH와_GH_공고를_실제_JSON_필드명으로도_올바르게_분류하고_필터링한다() {
+        LocalDate today = LocalDate.now();
+
+        // Given
+        // 1. 서울 마포 (SH) - 통과 (JSON 필드명 사용)
+        ObjectNode shSeoul = mapper.createObjectNode();
+        shSeoul.put("pblancNm", "SH 서울 JSON 공고");
+        shSeoul.put("fullAdres", "서울특별시 마포구 백범로");
+        shSeoul.put("rcritPblancDe", today.minusDays(5).toString());
+        shSeoul.put("beginDe", today.minusDays(1).toString());
+        shSeoul.put("endDe", today.plusDays(5).toString());
+        shSeoul.put("url", "http://sh.or.kr/json1");
+        shSeoul.put("suplyInsttNm", "서울주택도시공사");
+        shSeoul.put("suplyTyNm", "국민임대");
+
+        when(myHomeClient.isAvailable()).thenReturn(true);
+        when(myHomeClient.fetchAll()).thenReturn(List.<JsonNode>of(shSeoul));
+
+        // When
+        LhNoticesResponse shResponse = service.findShActiveToday();
+
+        // Then
+        assertThat(shResponse.apiKeyConfigured()).isTrue();
+        assertThat(shResponse.rent()).extracting(LhNoticeItem::name).containsExactly("SH 서울 JSON 공고");
+
+        LhNoticeItem item = shResponse.rent().get(0);
+        assertThat(item.panId()).isEqualTo("서울특별시 마포구 백범로");
+        assertThat(item.regionLabel()).isEqualTo("서울주택도시공사");
+        assertThat(item.detailUrl()).isEqualTo("http://sh.or.kr/json1");
+        assertThat(item.noticeDate()).isEqualTo(today.minusDays(5));
+        assertThat(item.rcptBegin()).isEqualTo(today.minusDays(1));
+        assertThat(item.rcptEnd()).isEqualTo(today.plusDays(5));
+    }
 }

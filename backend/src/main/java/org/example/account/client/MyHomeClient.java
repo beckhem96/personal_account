@@ -1,6 +1,7 @@
 package org.example.account.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -20,6 +21,7 @@ import java.util.List;
 public class MyHomeClient {
 
     private final XmlMapper xmlMapper = new XmlMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final RestClient restClient;
     private final String apiKey;
     private final String baseUrl;
@@ -70,8 +72,18 @@ public class MyHomeClient {
                 return Collections.emptyList();
             }
 
-            JsonNode root = xmlMapper.readTree(xml.getBytes());
-            JsonNode items = root.path("hsprRcritList").path("hsprRcrit");
+            JsonNode root;
+            String trimmed = xml.trim();
+            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+                root = objectMapper.readTree(xml.getBytes(StandardCharsets.UTF_8));
+            } else {
+                root = xmlMapper.readTree(xml.getBytes(StandardCharsets.UTF_8));
+            }
+
+            JsonNode items = root.path("response").path("body").path("item");
+            if (items.isMissingNode() || items.isNull()) {
+                items = root.path("hsprRcritList").path("hsprRcrit");
+            }
             if (items.isMissingNode() || items.isNull()) {
                 items = root.path("body").path("items").path("item");
             }

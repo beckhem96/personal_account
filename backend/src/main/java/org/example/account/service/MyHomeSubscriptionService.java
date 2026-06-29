@@ -77,9 +77,9 @@ public class MyHomeSubscriptionService {
             return null;
         }
 
-        LocalDate beginDate = date(raw, "rceptBgnde");
-        LocalDate endDate = date(raw, "rceptEndde");
-        LocalDate noticeDate = date(raw, "rcritNtcDe");
+        LocalDate beginDate = date(raw, "rceptBgnde", "beginDe");
+        LocalDate endDate = date(raw, "rceptEndde", "endDe");
+        LocalDate noticeDate = date(raw, "rcritNtcDe", "rcritPblancDe");
 
         if (endDate != null && today.isAfter(endDate)) {
             return null;
@@ -92,14 +92,14 @@ public class MyHomeSubscriptionService {
             }
         }
 
-        String typeName = text(raw, "uppAisTpCdNm");
+        String typeName = text(raw, "uppAisTpCdNm", "suplyTyNm", "houseTyNm");
         LhSupplyCategory category = LhSupplyCategory.SALE;
         if (typeName != null && (typeName.contains("임대") || typeName.contains("RENT"))) {
             category = LhSupplyCategory.RENT;
         }
 
         return new LhNoticeItem(
-                text(raw, "hssplyAdres"),
+                text(raw, "hssplyAdres", "fullAdres"),
                 name,
                 typeName != null ? typeName : "공공주택",
                 category,
@@ -108,7 +108,7 @@ public class MyHomeSubscriptionService {
                 noticeDate,
                 beginDate,
                 endDate,
-                text(raw, "pblancUrl")
+                text(raw, "pblancUrl", "url", "pcUrl")
         );
     }
 
